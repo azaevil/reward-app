@@ -25,32 +25,33 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Android Platformunu Hazirla
+      - name: Mobil Uygulamayi Olustur ve Derle
         run: |
-          # Temiz bir dizinde android altyapisini olustur
-          flutter create --platforms=android --org com.rewardapp --project-name mobile_reward_app /tmp/fresh_app
+          # 1. Temiz ve eksiksiz bir Flutter projesi olustur
+          flutter create --org com.rewardapp --project-name mobile_reward_app app_build
           
-          # Olusturulan android klasorunu mobile altina tasi
-          rm -rf mobile/android
-          cp -r /tmp/fresh_app/android mobile/
+          # 2. Kodlarimizi ve pubspec dosyamizi projenin icine tasi
+          cp -r mobile/lib/* app_build/lib/
+          cp mobile/pubspec.yaml app_build/
           
-          cd mobile
-          # flutter_secure_storage icin minSdkVersion'i 21 yap
+          cd app_build
+          
+          # 3. flutter_secure_storage icin minSdkVersion'i 21 yap
           find android -name "build.gradle*" -exec sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 21/g' {} +
           find android -name "build.gradle*" -exec sed -i 's/minSdkVersion = flutter.minSdkVersion/minSdkVersion = 21/g' {} +
           find android -name "build.gradle*" -exec sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 21/g' {} +
           find android -name "build.gradle*" -exec sed -i 's/minSdkVersion [0-9]*/minSdkVersion 21/g' {} +
 
           flutter pub get
-
-      - name: APK Derle
-        run: |
-          cd mobile
           flutter build apk --debug --no-tree-shake-icons
+          
+          # 4. Ciktiyi hazirla
+          mkdir -p ../apk_output
+          cp build/app/outputs/flutter-apk/*.apk ../apk_output/
 
-      - name: Derlenen APK'yi Yukle
+      - name: Derlenen APK'yi Yukle (Indirilebilir Yap)
         uses: actions/upload-artifact@v4
         with:
           name: reward-app-apk
-          path: mobile/build/app/outputs/flutter-apk/*.apk
+          path: apk_output/*.apk
 
