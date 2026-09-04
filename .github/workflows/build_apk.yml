@@ -14,29 +14,44 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Java Kurulumu (JDK 17)
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
-          distribution: 'zulu'
+          distribution: 'temurin'
           java-version: '17'
 
       - name: Flutter SDK Kurulumu
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.19.x'
           channel: 'stable'
+          cache: true
 
-      - name: Android Platform Dosyalarini Olustur ve Paketleri Indir
+      - name: Android Platformunu Hazirla
         run: |
           cd mobile
-          flutter create --platforms=android --org com.rewardapp .
+          # Kodlari gecici klasore yedekle
+          mkdir -p /tmp/lib_backup
+          cp -r lib/* /tmp/lib_backup/
+          
+          # Android altyapisini olustur
+          flutter create --platforms=android --org com.rewardapp --project-name mobile_reward_app .
+          
+          # Kodlarimizi geri yukle
+          cp -r /tmp/lib_backup/* lib/
+          
+          # minSdkVersion 21 yap (flutter_secure_storage uyumlulugu icin)
+          sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 21/g' android/app/build.gradle || true
+          sed -i 's/minSdkVersion = flutter.minSdkVersion/minSdkVersion = 21/g' android/app/build.gradle || true
+          sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 21/g' android/app/build.gradle || true
+          sed -i 's/minSdkVersion [0-9]*/minSdkVersion 21/g' android/app/build.gradle || true
+
           flutter pub get
 
       - name: APK Derle (Release)
         run: |
           cd mobile
-          flutter build apk --release
+          flutter build apk --release --no-tree-shake-icons
 
-      - name: Derlenen APK'yi Yukle (Indirilebilir Yap)
+      - name: Derlenen APK'yi Yukle
         uses: actions/upload-artifact@v4
         with:
           name: reward-app-release-apk
