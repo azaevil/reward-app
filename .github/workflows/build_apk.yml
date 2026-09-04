@@ -27,22 +27,19 @@ jobs:
 
       - name: Android Platformunu Hazirla
         run: |
+          # Temiz bir dizinde android altyapisini olustur
+          flutter create --platforms=android --org com.rewardapp --project-name mobile_reward_app /tmp/fresh_app
+          
+          # Olusturulan android klasorunu mobile altina tasi
+          rm -rf mobile/android
+          cp -r /tmp/fresh_app/android mobile/
+          
           cd mobile
-          # Kodlari gecici klasore yedekle
-          mkdir -p /tmp/lib_backup
-          cp -r lib/* /tmp/lib_backup/
-          
-          # Android altyapisini olustur
-          flutter create --platforms=android --org com.rewardapp --project-name mobile_reward_app .
-          
-          # Kodlarimizi geri yukle
-          cp -r /tmp/lib_backup/* lib/
-          
-          # minSdkVersion 21 yap (flutter_secure_storage uyumlulugu icin)
-          sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 21/g' android/app/build.gradle || true
-          sed -i 's/minSdkVersion = flutter.minSdkVersion/minSdkVersion = 21/g' android/app/build.gradle || true
-          sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 21/g' android/app/build.gradle || true
-          sed -i 's/minSdkVersion [0-9]*/minSdkVersion 21/g' android/app/build.gradle || true
+          # flutter_secure_storage icin minSdkVersion'i 21 yap
+          find android -name "build.gradle*" -exec sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 21/g' {} +
+          find android -name "build.gradle*" -exec sed -i 's/minSdkVersion = flutter.minSdkVersion/minSdkVersion = 21/g' {} +
+          find android -name "build.gradle*" -exec sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 21/g' {} +
+          find android -name "build.gradle*" -exec sed -i 's/minSdkVersion [0-9]*/minSdkVersion 21/g' {} +
 
           flutter pub get
 
@@ -55,5 +52,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: reward-app-release-apk
-          path: mobile/build/app/outputs/flutter-apk/app-release.apk
+          path: mobile/build/app/outputs/flutter-apk/*.apk
 
