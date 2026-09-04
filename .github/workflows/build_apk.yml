@@ -43,14 +43,14 @@ jobs:
 
           flutter pub get
 
-      - name: APK Derle (Release)
+      - name: APK Derle
         run: |
           cd mobile
-          flutter build apk --release --no-tree-shake-icons
+          flutter build apk --debug --no-tree-shake-icons
 
       - name: Derlenen APK'yi Yukle
         uses: actions/upload-artifact@v4
         with:
-          name: reward-app-release-apk
+          name: reward-app-apk
           path: mobile/build/app/outputs/flutter-apk/*.apk
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'theme.dart';
 import 'screens/feed_screen.dart';
 import 'screens/wallet_screen.dart';
+import 'screens/profile_screen.dart';
 
 void main() {
   runApp(const RewardApp());
@@ -34,7 +35,7 @@ class _MainNavigationHolderState extends State<MainNavigationHolder> {
     const FeedScreen(),
     const WalletScreen(),
     const Center(child: Text("İşlem Geçmişi", style: TextStyle(color: AppTheme.textSecondary))),
-    const Center(child: Text("Profil", style: TextStyle(color: AppTheme.textSecondary))),
+    const ProfileScreen(),
   ];
 
   @override
@@ -49,7 +50,7 @@ class _MainNavigationHolderState extends State<MainNavigationHolder> {
           currentIndex: _currentIndex,
           onTap: (index) => setState(() => _currentIndex = index),
           items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.style_outlined), activeIcon: Icon(Icons.style), label: 'Keşfet'),
+            BottomNavigationBarItem(icon: Icon(Icons.style), activeIcon: Icon(Icons.style), label: 'Keşfet'),
             BottomNavigationBarItem(icon: Icon(Icons.account_balance_wallet_outlined), activeIcon: Icon(Icons.account_balance_wallet), label: 'Cüzdan'),
             BottomNavigationBarItem(icon: Icon(Icons.history), label: 'Geçmiş'),
             BottomNavigationBarItem(icon: Icon(Icons.person_outline), activeIcon: Icon(Icons.person), label: 'Profil'),

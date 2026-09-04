@@ -95,7 +95,7 @@ class _FeedScreenState extends State<FeedScreen> {
                   child: const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.stars_outlined, size: 16, color: AppTheme.textPrimary),
+                      Icon(Icons.stars, size: 16, color: AppTheme.textPrimary),
                       SizedBox(width: 6),
                       Text("1,250 Puan", style: TextStyle(color: AppTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.w500)),
                     ],
