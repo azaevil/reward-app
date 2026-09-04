@@ -1,0 +1,25 @@
+# Environments and secrets
+.env
+*.env
+
+# Python
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+*.db
+ad_rewards.db
+
+# Node / Admin
+node_modules/
+admin/dist/
+admin/.vite/
+
+# Flutter & Android
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+build/
+*.apk
+
