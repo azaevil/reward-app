@@ -38,11 +38,14 @@ jobs:
           # 3. Paketleri temiz sekilde ekle
           flutter pub add http flutter_secure_storage
           
-          # 4. flutter_secure_storage icin minSdkVersion'i 21 yap
+          # 4. flutter_secure_storage icin compileSdk'yi 37 ve minSdkVersion'i 21 yap
+          find android -name "build.gradle*" -exec sed -i 's/compileSdk = [0-9]*/compileSdk = 37/g' {} +
+          find android -name "build.gradle*" -exec sed -i 's/compileSdkVersion [0-9]*/compileSdkVersion 37/g' {} +
           find android -name "build.gradle*" -exec sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 21/g' {} +
           find android -name "build.gradle*" -exec sed -i 's/minSdkVersion = flutter.minSdkVersion/minSdkVersion = 21/g' {} +
           find android -name "build.gradle*" -exec sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 21/g' {} +
           find android -name "build.gradle*" -exec sed -i 's/minSdkVersion [0-9]*/minSdkVersion 21/g' {} +
+          find android -name "build.gradle*" -exec sed -i 's/minSdk = [0-9]*/minSdk = 21/g' {} +
 
           # 5. APK Derle
           flutter build apk --debug --no-tree-shake-icons

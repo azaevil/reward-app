@@ -20,7 +20,7 @@ class AppTheme {
         backgroundColor: background,
         elevation: 0,
         centerTitle: false,
-        titleTextStyle: TextStyle(color: textPrimary, fontSize: 18, fontWeight: FontWeight: FontWeight.w600),
+        titleTextStyle: TextStyle(color: textPrimary, fontSize: 18, fontWeight: FontWeight.w600),
       ),
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
         backgroundColor: surface,
