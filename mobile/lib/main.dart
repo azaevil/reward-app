@@ -50,10 +50,10 @@ class _MainNavigationHolderState extends State<MainNavigationHolder> {
           currentIndex: _currentIndex,
           onTap: (index) => setState(() => _currentIndex = index),
           items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.style), activeIcon: Icon(Icons.style), label: 'Keşfet'),
-            BottomNavigationBarItem(icon: Icon(Icons.account_balance_wallet_outlined), activeIcon: Icon(Icons.account_balance_wallet), label: 'Cüzdan'),
+            BottomNavigationBarItem(icon: Icon(Icons.style), label: 'Keşfet'),
+            BottomNavigationBarItem(icon: Icon(Icons.account_balance_wallet), label: 'Cüzdan'),
             BottomNavigationBarItem(icon: Icon(Icons.history), label: 'Geçmiş'),
-            BottomNavigationBarItem(icon: Icon(Icons.person_outline), activeIcon: Icon(Icons.person), label: 'Profil'),
+            BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profil'),
           ],
         ),
       ),
