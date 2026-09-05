@@ -48,16 +48,26 @@ jobs:
           find android -name "build.gradle" -exec sed -i 's/compileSdkVersion .*/compileSdkVersion 37/g' {} +
           find android -name "build.gradle" -exec sed -i 's/minSdkVersion .*/minSdkVersion 21/g' {} +
 
-          # 5. APK Derle
+          # 6. Hem APK (Telefon Testi) Hem AAB (Play Store) Derle
           flutter build apk --debug --no-tree-shake-icons
+          flutter build appbundle --release --no-tree-shake-icons
           
-          # 6. Ciktiyi hazirla
+          # 7. Ciktilari hazirla
           mkdir -p ../apk_output
           cp build/app/outputs/flutter-apk/*.apk ../apk_output/
+          
+          mkdir -p ../aab_output
+          cp build/app/outputs/bundle/release/*.aab ../aab_output/
 
-      - name: Derlenen APK'yi Yukle (Indirilebilir Yap)
+      - name: Derlenen APK'yi Yukle (Telefon Icin)
         uses: actions/upload-artifact@v4
         with:
           name: reward-app-apk
           path: apk_output/*.apk
+
+      - name: Derlenen AAB Paketini Yukle (Google Play Store Icin)
+        uses: actions/upload-artifact@v4
+        with:
+          name: reward-app-playstore-aab
+          path: aab_output/*.aab
 
