@@ -1,18 +1,16 @@
-import 'package:flutter/foundation.dart';
+ï»¿import 'package:flutter/foundation.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 class AdMobService {
-  // Canlý Ad Unit ID (AdMob panelinden alýnan)
-  static const String liveAdUnitId = 'ca-app-pub-7125012606848968/1582412035';
-  
-  // Google'ýn resmi test reklam ID'si (Geliþtirme / Test aþamasýnda banlanmamak için)
-  static const String testAdUnitId = 'ca-app-pub-3940256099942544/5224354917';
+  static const String liveRewardedAdUnitId = 'ca-app-pub-7125012606848968/1582412035';
+  static const String testRewardedAdUnitId = 'ca-app-pub-3940256099942544/5224354917';
+  static const String testBannerAdUnitId = 'ca-app-pub-3940256099942544/6300978111';
 
   RewardedAd? _rewardedAd;
   bool isAdLoaded = false;
 
-  // Geliþtirme aþamasýnda test reklamý, release'de canlý reklam birimini kullanýr
-  String get rewardedAdUnitId => kReleaseMode ? liveAdUnitId : testAdUnitId;
+  String get rewardedAdUnitId => kReleaseMode ? liveRewardedAdUnitId : testRewardedAdUnitId;
+  String get bannerAdUnitId => testBannerAdUnitId;
 
   static Future<void> initialize() async {
     await MobileAds.instance.initialize();
@@ -42,7 +40,6 @@ class AdMobService {
       _rewardedAd!.fullScreenContentCallback = FullScreenContentCallback(
         onAdDismissedFullScreenContent: (ad) {
           ad.dispose();
-          // Reklam kapanýnca bir sonraki reklamý önceden belleðe al
           loadRewardedAd(onLoaded: () {}, onFailed: () {});
         },
         onAdFailedToShowFullScreenContent: (ad, error) {
@@ -59,5 +56,21 @@ class AdMobService {
       _rewardedAd = null;
       isAdLoaded = false;
     }
+  }
+
+  BannerAd createInFeedBannerAd({required Function() onAdLoaded}) {
+    return BannerAd(
+      adUnitId: bannerAdUnitId,
+      size: AdSize.mediumRectangle,
+      request: const AdRequest(),
+      listener: BannerAdListener(
+        onAdLoaded: (ad) {
+          onAdLoaded();
+        },
+        onAdFailedToLoad: (ad, error) {
+          ad.dispose();
+        },
+      ),
+    )..load();
   }
 }

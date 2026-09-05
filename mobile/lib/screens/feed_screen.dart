@@ -1,5 +1,6 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../theme.dart';
 import '../services/ad_mob_service.dart';
 
@@ -13,22 +14,26 @@ class FeedScreen extends StatefulWidget {
 class _FeedScreenState extends State<FeedScreen> with TickerProviderStateMixin {
   final PageController _pageController = PageController();
   final AdMobService _adMobService = AdMobService();
-  bool _isAdReady = false;
-  int _userPoints = 0; // Puan havuzu
+  bool _isRewardedAdReady = false;
+  int _userPoints = 0;
   int _currentPage = 0;
-  
+
+  // In-Feed Google Banner Reklamları Belleği
+  final Map<int, BannerAd> _bannerAds = {};
+  final Map<int, bool> _bannerAdLoaded = {};
+
   // Dönen Ödül Sayacı (TikTok Lite Tarzı)
   late AnimationController _progressController;
   Timer? _dwellTimer;
-  static const int _requiredWatchSeconds = 4; // 4 saniye izleme şartı
+  static const int _requiredWatchSeconds = 4;
   int _currentWatchSeconds = 0;
   bool _rewardGivenForCurrentCard = false;
 
   @override
   void initState() {
     super.initState();
-    _loadNextAd();
-    
+    _loadNextRewardedAd();
+
     _progressController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: _requiredWatchSeconds),
@@ -42,6 +47,9 @@ class _FeedScreenState extends State<FeedScreen> with TickerProviderStateMixin {
     _dwellTimer?.cancel();
     _progressController.dispose();
     _pageController.dispose();
+    for (var ad in _bannerAds.values) {
+      ad.dispose();
+    }
     super.dispose();
   }
 
@@ -68,8 +76,7 @@ class _FeedScreenState extends State<FeedScreen> with TickerProviderStateMixin {
     setState(() {
       _userPoints += 1; // +1 Puan ($0.001)
     });
-    
-    // Küçük başarı animasyonu / SnackBar
+
     ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -97,33 +104,32 @@ class _FeedScreenState extends State<FeedScreen> with TickerProviderStateMixin {
     setState(() {
       _currentPage = index;
     });
-    // Yeni karta geçince sayacı yeniden başlat
     _startDwellTimer();
   }
 
-  void _loadNextAd() {
+  void _loadNextRewardedAd() {
     _adMobService.loadRewardedAd(
       onLoaded: () {
-        if (mounted) setState(() => _isAdReady = true);
+        if (mounted) setState(() => _isRewardedAdReady = true);
       },
       onFailed: () {
-        if (mounted) setState(() => _isAdReady = false);
+        if (mounted) setState(() => _isRewardedAdReady = false);
       },
     );
   }
 
   void _watchBonusAd() {
     if (!mounted) return;
-    if (_isAdReady) {
+    if (_isRewardedAdReady) {
       _adMobService.showRewardedAd(
         onEarnedReward: (amount) {
           if (!mounted) return;
-          final earned = amount > 0 ? amount : 30; // +30 Puan Bonus
+          final earned = amount > 0 ? amount : 30;
           setState(() {
             _userPoints += earned;
-            _isAdReady = false;
+            _isRewardedAdReady = false;
           });
-          _loadNextAd();
+          _loadNextRewardedAd();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               backgroundColor: const Color(0xFF1E3A2B),
@@ -139,8 +145,23 @@ class _FeedScreenState extends State<FeedScreen> with TickerProviderStateMixin {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Bonus video hazırlanıyor, lütfen birkaç saniye bekleyin...')),
       );
-      _loadNextAd();
+      _loadNextRewardedAd();
     }
+  }
+
+  BannerAd _getOrCreateBannerAd(int index) {
+    if (!_bannerAds.containsKey(index)) {
+      _bannerAds[index] = _adMobService.createInFeedBannerAd(
+        onAdLoaded: () {
+          if (mounted) {
+            setState(() {
+              _bannerAdLoaded[index] = true;
+            });
+          }
+        },
+      );
+    }
+    return _bannerAds[index]!;
   }
 
   final List<Map<String, String>> _feedItems = [
@@ -162,24 +183,6 @@ class _FeedScreenState extends State<FeedScreen> with TickerProviderStateMixin {
       "image": "https://images.unsplash.com/photo-1506905925346-21bda4d32df4",
       "tag": "Seyahat & Macera"
     },
-    {
-      "title": "Şehir İçi Elektrikli Ulaşım Devrimi",
-      "advertiser": "MoveX Global",
-      "image": "https://images.unsplash.com/photo-1558618666-fcd25c85cd64",
-      "tag": "Teknoloji Trend"
-    },
-    {
-      "title": "Minimalist Yaşam ve Tasarım Koleksiyonu",
-      "advertiser": "Forma Studio",
-      "image": "https://images.unsplash.com/photo-1555041469-a586c61ea9bc",
-      "tag": "Tasarım & Dekor"
-    },
-    {
-      "title": "Kişiselleştirilmiş Sağlıklı Yaşam Planı",
-      "advertiser": "NutriLife AI",
-      "image": "https://images.unsplash.com/photo-1490645935967-10de6ba17061",
-      "tag": "Sağlık & Yaşam"
-    },
   ];
 
   @override
@@ -189,13 +192,138 @@ class _FeedScreenState extends State<FeedScreen> with TickerProviderStateMixin {
     return Scaffold(
       body: Stack(
         children: [
-          // Dikey Reels / Feed Kaydırma
           PageView.builder(
             controller: _pageController,
             scrollDirection: Axis.vertical,
             onPageChanged: _onPageChanged,
             itemBuilder: (context, index) {
-              final item = _feedItems[index % _feedItems.length];
+              // Her 2 kartta bir GERÇEK GOOGLE REKLAMI (In-Feed AdMob) göster
+              final bool isAdMobCard = (index % 2 == 1);
+
+              if (isAdMobCard) {
+                final bannerAd = _getOrCreateBannerAd(index);
+                final bool isLoaded = _bannerAdLoaded[index] ?? false;
+
+                return Container(
+                  color: const Color(0xFF0F0F14),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      // Arka Plan Deseni
+                      Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: Colors.purple.withOpacity(0.2),
+                                border: Border.all(color: Colors.purpleAccent.withOpacity(0.5)),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: const Text(
+                                "GOOGLE ADMOB SPONSORLU REKLAM",
+                                style: TextStyle(
+                                  color: Colors.purpleAccent,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 1,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                            
+                            // Gerçek Google Reklam Kutusu
+                            isLoaded
+                                ? Container(
+                                    width: bannerAd.size.width.toDouble(),
+                                    height: bannerAd.size.height.toDouble(),
+                                    decoration: BoxDecoration(
+                                      border: Border.all(color: Colors.white12),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: AdWidget(ad: bannerAd),
+                                  )
+                                : Container(
+                                    width: 300,
+                                    height: 250,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.05),
+                                      border: Border.all(color: Colors.white12),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: const Center(
+                                      child: CircularProgressIndicator(
+                                        color: Colors.purpleAccent,
+                                      ),
+                                    ),
+                                  ),
+                          ],
+                        ),
+                      ),
+
+                      // Alt Bilgi ve Bonus Butonu
+                      Positioned(
+                        bottom: 30,
+                        left: 20,
+                        right: 20,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              "Sponsorlu Reklam Yayını",
+                              style: TextStyle(
+                                color: AppTheme.textPrimary,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            const Text(
+                              "Google Ads Network tarafından sunulmaktadır.",
+                              style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                            ),
+                            const SizedBox(height: 16),
+                            SizedBox(
+                              width: double.infinity,
+                              height: 44,
+                              child: ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.purpleAccent,
+                                  foregroundColor: Colors.black,
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                ),
+                                onPressed: _watchBonusAd,
+                                icon: Icon(
+                                  _isRewardedAdReady ? Icons.play_circle_filled : Icons.hourglass_empty,
+                                  size: 20,
+                                  color: Colors.black,
+                                ),
+                                label: Text(
+                                  _isRewardedAdReady
+                                      ? "BONUS REKLAM İZLE (+30 PUAN)"
+                                      : "BONUS YÜKLENİYOR...",
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 12,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              // Normal İçerik Kartı
+              final item = _feedItems[(index ~/ 2) % _feedItems.length];
               return Stack(
                 fit: StackFit.expand,
                 children: [
@@ -217,8 +345,6 @@ class _FeedScreenState extends State<FeedScreen> with TickerProviderStateMixin {
                       ),
                     ),
                   ),
-                  
-                  // Kart Bilgisi ve Aksiyon Alanı
                   Positioned(
                     bottom: 30,
                     left: 20,
@@ -261,8 +387,6 @@ class _FeedScreenState extends State<FeedScreen> with TickerProviderStateMixin {
                           ),
                         ),
                         const SizedBox(height: 16),
-                        
-                        // Ekstra Bonus Butonu
                         SizedBox(
                           width: double.infinity,
                           height: 44,
@@ -277,12 +401,12 @@ class _FeedScreenState extends State<FeedScreen> with TickerProviderStateMixin {
                             ),
                             onPressed: _watchBonusAd,
                             icon: Icon(
-                              _isAdReady ? Icons.play_circle_filled : Icons.hourglass_empty,
+                              _isRewardedAdReady ? Icons.play_circle_filled : Icons.hourglass_empty,
                               size: 20,
                               color: Colors.black,
                             ),
                             label: Text(
-                              _isAdReady
+                              _isRewardedAdReady
                                   ? "BONUS REKLAM İZLE (+30 PUAN)"
                                   : "BONUS YÜKLENİYOR...",
                               style: const TextStyle(
@@ -301,14 +425,13 @@ class _FeedScreenState extends State<FeedScreen> with TickerProviderStateMixin {
             },
           ),
 
-          // Üst Header (Sol: TikTok Tarzı Dönen Sayaç, Sağ: Canlı Bakiye)
+          // Üst Header
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Sol: Dönen Ödül Sayacı
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
@@ -346,8 +469,6 @@ class _FeedScreenState extends State<FeedScreen> with TickerProviderStateMixin {
                       ],
                     ),
                   ),
-
-                  // Sağ: Toplam Bakiye & Dolar Göstergesi
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                     decoration: BoxDecoration(
