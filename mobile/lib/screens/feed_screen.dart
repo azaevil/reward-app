@@ -18,7 +18,7 @@ class _FeedScreenState extends State<FeedScreen> with TickerProviderStateMixin {
   int _userPoints = 0;
   int _currentPage = 0;
 
-  // In-Feed Google Banner Reklamları Belleği
+  // Her kart için AdMob Reklamları
   final Map<int, BannerAd> _bannerAds = {};
   final Map<int, bool> _bannerAdLoaded = {};
 
@@ -164,263 +164,189 @@ class _FeedScreenState extends State<FeedScreen> with TickerProviderStateMixin {
     return _bannerAds[index]!;
   }
 
-  final List<Map<String, String>> _feedItems = [
-    {
-      "title": "Sürdürülebilir Mimarlık Sergisi",
-      "advertiser": "Studio Nord",
-      "image": "https://images.unsplash.com/photo-1600585154340-be6161a56a0c",
-      "tag": "Sponsorlu Vitrin"
-    },
-    {
-      "title": "Geleceğin Finans Yönetimi",
-      "advertiser": "Vanguard Labs",
-      "image": "https://images.unsplash.com/photo-1551836022-d5d88e9218df",
-      "tag": "Fintech & Web3"
-    },
-    {
-      "title": "Doğa Kaçamağı & Keşif Rotaları",
-      "advertiser": "WildTrails Co.",
-      "image": "https://images.unsplash.com/photo-1506905925346-21bda4d32df4",
-      "tag": "Seyahat & Macera"
-    },
-  ];
-
   @override
   Widget build(BuildContext context) {
     final double dollarEquivalent = _userPoints * 0.001;
 
     return Scaffold(
+      backgroundColor: const Color(0xFF0A0A0E),
       body: Stack(
         children: [
+          // %100 GOOGLE ADMOB REKLAM AKIŞI (Sonsuz Kaydırma)
           PageView.builder(
             controller: _pageController,
             scrollDirection: Axis.vertical,
             onPageChanged: _onPageChanged,
             itemBuilder: (context, index) {
-              // Her 2 kartta bir GERÇEK GOOGLE REKLAMI (In-Feed AdMob) göster
-              final bool isAdMobCard = (index % 2 == 1);
+              final bannerAd = _getOrCreateBannerAd(index);
+              final bool isLoaded = _bannerAdLoaded[index] ?? false;
 
-              if (isAdMobCard) {
-                final bannerAd = _getOrCreateBannerAd(index);
-                final bool isLoaded = _bannerAdLoaded[index] ?? false;
-
-                return Container(
-                  color: const Color(0xFF0F0F14),
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      // Arka Plan Deseni
-                      Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: Colors.purple.withOpacity(0.2),
-                                border: Border.all(color: Colors.purpleAccent.withOpacity(0.5)),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: const Text(
-                                "GOOGLE ADMOB SPONSORLU REKLAM",
-                                style: TextStyle(
-                                  color: Colors.purpleAccent,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 1,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 20),
-                            
-                            // Gerçek Google Reklam Kutusu
-                            isLoaded
-                                ? Container(
-                                    width: bannerAd.size.width.toDouble(),
-                                    height: bannerAd.size.height.toDouble(),
-                                    decoration: BoxDecoration(
-                                      border: Border.all(color: Colors.white12),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: AdWidget(ad: bannerAd),
-                                  )
-                                : Container(
-                                    width: 300,
-                                    height: 250,
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.05),
-                                      border: Border.all(color: Colors.white12),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: const Center(
-                                      child: CircularProgressIndicator(
-                                        color: Colors.purpleAccent,
-                                      ),
-                                    ),
-                                  ),
-                          ],
-                        ),
-                      ),
-
-                      // Alt Bilgi ve Bonus Butonu
-                      Positioned(
-                        bottom: 30,
-                        left: 20,
-                        right: 20,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              "Sponsorlu Reklam Yayını",
-                              style: TextStyle(
-                                color: AppTheme.textPrimary,
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            const Text(
-                              "Google Ads Network tarafından sunulmaktadır.",
-                              style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
-                            ),
-                            const SizedBox(height: 16),
-                            SizedBox(
-                              width: double.infinity,
-                              height: 44,
-                              child: ElevatedButton.icon(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.purpleAccent,
-                                  foregroundColor: Colors.black,
-                                  elevation: 0,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                ),
-                                onPressed: _watchBonusAd,
-                                icon: Icon(
-                                  _isRewardedAdReady ? Icons.play_circle_filled : Icons.hourglass_empty,
-                                  size: 20,
-                                  color: Colors.black,
-                                ),
-                                label: Text(
-                                  _isRewardedAdReady
-                                      ? "BONUS REKLAM İZLE (+30 PUAN)"
-                                      : "BONUS YÜKLENİYOR...",
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w900,
-                                    fontSize: 12,
-                                    letterSpacing: 0.5,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+              return Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Color(0xFF0F0C20),
+                      Color(0xFF0A0A0E),
+                      Color(0xFF150A21),
                     ],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
                   ),
-                );
-              }
-
-              // Normal İçerik Kartı
-              final item = _feedItems[(index ~/ 2) % _feedItems.length];
-              return Stack(
-                fit: StackFit.expand,
-                children: [
-                  Image.network(
-                    item["image"]!,
-                    fit: BoxFit.cover,
-                    errorBuilder: (c, e, s) => Container(color: AppTheme.surface),
-                  ),
-                  Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          Colors.black.withOpacity(0.85),
-                          Colors.transparent,
-                          Colors.black.withOpacity(0.95),
-                        ],
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
+                ),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    // Arka Plan Işıklandırması
+                    Positioned(
+                      top: 120,
+                      left: 0,
+                      right: 0,
+                      child: Center(
+                        child: Container(
+                          width: 260,
+                          height: 260,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.purpleAccent.withOpacity(0.08),
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                  Positioned(
-                    bottom: 30,
-                    left: 20,
-                    right: 20,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Colors.purpleAccent.withOpacity(0.6)),
-                            color: Colors.purple.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            item["tag"]!,
-                            style: const TextStyle(
-                              color: Colors.purpleAccent,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 1,
+
+                    // Ortadaki Gerçek Google Reklamı (Video / Görsel / Medya)
+                    Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: Colors.purple.withOpacity(0.25),
+                              border: Border.all(color: Colors.purpleAccent.withOpacity(0.6)),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: const [
+                                Icon(Icons.play_arrow, size: 14, color: Colors.purpleAccent),
+                                SizedBox(width: 6),
+                                Text(
+                                  "SPONSORLU GOOGLE REKLAMI",
+                                  style: TextStyle(
+                                    color: Colors.purpleAccent,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: 1,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          item["title"]!,
-                          style: const TextStyle(
-                            color: AppTheme.textPrimary,
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          item["advertiser"]!,
-                          style: const TextStyle(
-                            color: AppTheme.textSecondary,
-                            fontSize: 14,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        SizedBox(
-                          width: double.infinity,
-                          height: 44,
-                          child: ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.purpleAccent,
-                              foregroundColor: Colors.black,
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                            ),
-                            onPressed: _watchBonusAd,
-                            icon: Icon(
-                              _isRewardedAdReady ? Icons.play_circle_filled : Icons.hourglass_empty,
-                              size: 20,
-                              color: Colors.black,
-                            ),
-                            label: Text(
-                              _isRewardedAdReady
-                                  ? "BONUS REKLAM İZLE (+30 PUAN)"
-                                  : "BONUS YÜKLENİYOR...",
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w900,
-                                fontSize: 12,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
+                          const SizedBox(height: 24),
+                          
+                          // Google AdMob Reklam Çerçevesi
+                          isLoaded
+                              ? Container(
+                                  width: bannerAd.size.width.toDouble(),
+                                  height: bannerAd.size.height.toDouble(),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black,
+                                    border: Border.all(color: Colors.purpleAccent.withOpacity(0.3), width: 1.5),
+                                    borderRadius: BorderRadius.circular(12),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.purpleAccent.withOpacity(0.15),
+                                        blurRadius: 20,
+                                        spreadRadius: 2,
+                                      )
+                                    ],
+                                  ),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(10),
+                                    child: AdWidget(ad: bannerAd),
+                                  ),
+                                )
+                              : Container(
+                                  width: 300,
+                                  height: 250,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.03),
+                                    border: Border.all(color: Colors.white12),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: const [
+                                      CircularProgressIndicator(color: Colors.purpleAccent, strokeWidth: 2.5),
+                                      SizedBox(height: 16),
+                                      Text(
+                                        "Google Reklamı Yükleniyor...",
+                                        style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+
+                    // Alt Panel & Bonus Butonu
+                    Positioned(
+                      bottom: 30,
+                      left: 20,
+                      right: 20,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            "Vidreel Sponsorlu Akış",
+                            style: TextStyle(
+                              color: AppTheme.textPrimary,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            "İzledikçe puanlar otomatik olarak cüzdanınıza eklenir.",
+                            style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                          ),
+                          const SizedBox(height: 16),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 46,
+                            child: ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.purpleAccent,
+                                foregroundColor: Colors.black,
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                              ),
+                              onPressed: _watchBonusAd,
+                              icon: Icon(
+                                _isRewardedAdReady ? Icons.play_circle_filled : Icons.hourglass_empty,
+                                size: 20,
+                                color: Colors.black,
+                              ),
+                              label: Text(
+                                _isRewardedAdReady
+                                    ? "TAM EKRAN BONUS İZLE (+30 PUAN)"
+                                    : "BONUS YÜKLENİYOR...",
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 12,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               );
             },
           ),
