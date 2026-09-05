@@ -8,16 +8,16 @@ import 'services/ad_mob_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await AdMobService.initialize();
-  runApp(const RewardApp());
+  runApp(const VidreelApp());
 }
 
-class RewardApp extends StatelessWidget {
-  const RewardApp({super.key});
+class VidreelApp extends StatelessWidget {
+  const VidreelApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'AdRewards',
+      title: 'Vidreel',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
       home: const MainNavigationHolder(),

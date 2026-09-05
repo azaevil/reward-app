@@ -1,4 +1,4 @@
-name: Build Android APK
+name: Build Vidreel APK
 
 on:
   push:
@@ -28,7 +28,7 @@ jobs:
       - name: Mobil Uygulamayi Olustur ve Derle
         run: |
           # 1. Temiz bir Flutter projesi olustur
-          flutter create --platforms=android --org com.rewardapp --project-name mobile_reward_app app_build
+          flutter create --platforms=android --org com.vidreel --project-name vidreel app_build
           
           # 2. Kodlarimizi lib altina kopyala
           cp -r mobile/lib/* app_build/lib/
@@ -62,12 +62,13 @@ jobs:
       - name: Derlenen APK'yi Yukle (Telefon Icin)
         uses: actions/upload-artifact@v4
         with:
-          name: reward-app-apk
+          name: vidreel-apk
           path: apk_output/*.apk
 
       - name: Derlenen AAB Paketini Yukle (Google Play Store Icin)
         uses: actions/upload-artifact@v4
         with:
-          name: reward-app-playstore-aab
+          name: vidreel-playstore-aab
           path: aab_output/*.aab
+
 
