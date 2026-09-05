@@ -3,8 +3,11 @@ import 'theme.dart';
 import 'screens/feed_screen.dart';
 import 'screens/wallet_screen.dart';
 import 'screens/profile_screen.dart';
+import 'services/ad_mob_service.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await AdMobService.initialize();
   runApp(const RewardApp());
 }
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme.dart';
+import '../services/ad_mob_service.dart';
 
 class FeedScreen extends StatefulWidget {
   const FeedScreen({super.key});
@@ -10,6 +11,53 @@ class FeedScreen extends StatefulWidget {
 
 class _FeedScreenState extends State<FeedScreen> {
   final PageController _pageController = PageController();
+  final AdMobService _adMobService = AdMobService();
+  bool _isAdReady = false;
+  int _userPoints = 1250;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadNextAd();
+  }
+
+  void _loadNextAd() {
+    _adMobService.loadRewardedAd(
+      onLoaded: () {
+        if (mounted) setState(() => _isAdReady = true);
+      },
+      onFailed: () {
+        if (mounted) setState(() => _isAdReady = false);
+      },
+    );
+  }
+
+  void _watchAd() {
+    if (_isAdReady) {
+      _adMobService.showRewardedAd(
+        onEarnedReward: (amount) {
+          setState(() {
+            _userPoints += (amount > 0 ? amount : 50);
+            _isAdReady = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: const Color(0xFF1E3A2B),
+              content: Text(
+                'Tebrikler! +${amount > 0 ? amount : 50} Puan kazandınız.',
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+            ),
+          );
+        },
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Yeni reklam yükleniyor, lütfen birkaç saniye bekleyin...')),
+      );
+      _loadNextAd();
+    }
+  }
 
   final List<Map<String, String>> _mockAds = [
     {
@@ -71,6 +119,25 @@ class _FeedScreenState extends State<FeedScreen> {
                         Text(ad["title"]!, style: const TextStyle(color: AppTheme.textPrimary, fontSize: 22, fontWeight: FontWeight.bold)),
                         const SizedBox(height: 4),
                         Text(ad["advertiser"]!, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 44,
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.textPrimary,
+                              foregroundColor: AppTheme.background,
+                              elevation: 0,
+                              shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+                            ),
+                            onPressed: _watchAd,
+                            icon: Icon(_isAdReady ? Icons.play_arrow : Icons.hourglass_empty, size: 18),
+                            label: Text(
+                              _isAdReady ? "ÖDÜLLÜ VİDEOYU İZLE (+50 PUAN)" : "REKLAM YÜKLENİYOR...",
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, letterSpacing: 0.5),
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   )
@@ -92,12 +159,12 @@ class _FeedScreenState extends State<FeedScreen> {
                     borderRadius: BorderRadius.circular(4),
                     border: Border.all(color: AppTheme.border),
                   ),
-                  child: const Row(
+                  child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.stars, size: 16, color: AppTheme.textPrimary),
-                      SizedBox(width: 6),
-                      Text("1,250 Puan", style: TextStyle(color: AppTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.w500)),
+                      const Icon(Icons.stars, size: 16, color: AppTheme.textPrimary),
+                      const SizedBox(width: 6),
+                      Text("$_userPoints Puan", style: const TextStyle(color: AppTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.w500)),
                     ],
                   ),
                 ),

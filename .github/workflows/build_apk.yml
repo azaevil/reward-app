@@ -36,9 +36,13 @@ jobs:
           cd app_build
           
           # 3. Paketleri temiz sekilde ekle
-          flutter pub add http flutter_secure_storage
+          flutter pub add http flutter_secure_storage google_mobile_ads
           
-          # 4. flutter_secure_storage icin compileSdk'yi 37 ve minSdkVersion'i 21 yap
+          # 4. AdMob App ID'sini AndroidManifest.xml icine ekle
+          MANIFEST_FILE="android/app/src/main/AndroidManifest.xml"
+          sed -i '/<\/application>/i \        <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="ca-app-pub-7125012606848968~4912599600"/>' $MANIFEST_FILE
+          
+          # 5. compileSdk 37 ve minSdk 21 yap
           find android -name "build.gradle.kts" -exec sed -i 's/compileSdk = .*/compileSdk = 37/g' {} +
           find android -name "build.gradle.kts" -exec sed -i 's/minSdk = .*/minSdk = 21/g' {} +
           find android -name "build.gradle" -exec sed -i 's/compileSdkVersion .*/compileSdkVersion 37/g' {} +
