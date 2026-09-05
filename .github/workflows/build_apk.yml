@@ -1,4 +1,4 @@
-name: Build Vidreel APK
+﻿name: Build Vidreel APK
 
 on:
   push:
@@ -53,8 +53,9 @@ jobs:
           # 6. Ikon uret
           dart run flutter_launcher_icons
           
-          # 7. AdMob App ID'sini AndroidManifest.xml icine ekle
+          # 7. Uygulama Adini Buyuk Harfli 'Vidreel' Yap ve AdMob ID Ekle
           MANIFEST_FILE="android/app/src/main/AndroidManifest.xml"
+          sed -i 's/android:label="vidreel"/android:label="Vidreel"/g' $MANIFEST_FILE
           sed -i '/<\/application>/i \        <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="ca-app-pub-7125012606848968~4912599600"/>' $MANIFEST_FILE
           
           # 8. compileSdk 37 ve minSdk 21 yap
@@ -67,7 +68,7 @@ jobs:
           flutter build apk --debug --no-tree-shake-icons
           flutter build appbundle --release --no-tree-shake-icons
           
-          # 7. Ciktilari hazirla
+          # 10. Ciktilari hazirla
           mkdir -p ../apk_output
           cp build/app/outputs/flutter-apk/*.apk ../apk_output/
           
@@ -85,5 +86,3 @@ jobs:
         with:
           name: vidreel-playstore-aab
           path: aab_output/*.aab
-
-
