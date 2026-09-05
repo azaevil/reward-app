@@ -13,12 +13,37 @@ class _FeedScreenState extends State<FeedScreen> {
   final PageController _pageController = PageController();
   final AdMobService _adMobService = AdMobService();
   bool _isAdReady = false;
-  int _userPoints = 1250;
+  int _userPoints = 0; // Başlangıçta 0 puan
+  int _swipeCount = 0; // Kaç kez kaydırıldı
+  static const int _adEvery = 3; // Her 3 kaydırmada 1 reklam
 
   @override
   void initState() {
     super.initState();
     _loadNextAd();
+    _pageController.addListener(_onPageScroll);
+  }
+
+  @override
+  void dispose() {
+    _pageController.removeListener(_onPageScroll);
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  void _onPageScroll() {
+    // Sayfa değiştiğinde (tam kaydırma tamamlandığında) tetikle
+    if (_pageController.page != null &&
+        _pageController.page! == _pageController.page!.roundToDouble()) {
+      final newPage = _pageController.page!.round();
+      if (newPage > 0) {
+        _swipeCount++;
+        if (_swipeCount % _adEvery == 0 && _isAdReady) {
+          // Her 3 kaydırmada reklam otomatik aç
+          Future.delayed(const Duration(milliseconds: 300), _watchAd);
+        }
+      }
+    }
   }
 
   void _loadNextAd() {
@@ -33,18 +58,22 @@ class _FeedScreenState extends State<FeedScreen> {
   }
 
   void _watchAd() {
+    if (!mounted) return;
     if (_isAdReady) {
       _adMobService.showRewardedAd(
         onEarnedReward: (amount) {
+          if (!mounted) return;
+          final earned = amount > 0 ? amount : 50;
           setState(() {
-            _userPoints += (amount > 0 ? amount : 50);
+            _userPoints += earned;
             _isAdReady = false;
           });
+          _loadNextAd(); // Sonraki reklamı hazırla
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               backgroundColor: const Color(0xFF1E3A2B),
               content: Text(
-                'Tebrikler! +${amount > 0 ? amount : 50} Puan kazandınız.',
+                '🎉 Tebrikler! +$earned Puan kazandınız.',
                 style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
               ),
             ),
@@ -59,7 +88,8 @@ class _FeedScreenState extends State<FeedScreen> {
     }
   }
 
-  final List<Map<String, String>> _mockAds = [
+  // Sonsuz kaydırma için tekrarlanan içerik
+  final List<Map<String, String>> _feedItems = [
     {
       "title": "Sürdürülebilir Mimarlık Sergisi",
       "advertiser": "Studio Nord",
@@ -69,7 +99,37 @@ class _FeedScreenState extends State<FeedScreen> {
       "title": "Geleceğin Finans Yönetimi",
       "advertiser": "Vanguard Labs",
       "image": "https://images.unsplash.com/photo-1551836022-d5d88e9218df",
-    }
+    },
+    {
+      "title": "Doğa Kaçamağı Fırsatları",
+      "advertiser": "WildTrails",
+      "image": "https://images.unsplash.com/photo-1506905925346-21bda4d32df4",
+    },
+    {
+      "title": "Şehir İçi Ulaşım Devrimi",
+      "advertiser": "MoveX",
+      "image": "https://images.unsplash.com/photo-1558618666-fcd25c85cd64",
+    },
+    {
+      "title": "Minimalist Yaşam Koleksiyonu",
+      "advertiser": "Forma Studio",
+      "image": "https://images.unsplash.com/photo-1555041469-a586c61ea9bc",
+    },
+    {
+      "title": "Sağlıklı Beslenme Planları",
+      "advertiser": "NutriLife",
+      "image": "https://images.unsplash.com/photo-1490645935967-10de6ba17061",
+    },
+    {
+      "title": "Akıllı Ev Teknolojisi",
+      "advertiser": "SmartHome TR",
+      "image": "https://images.unsplash.com/photo-1558002038-1055e2dae1d7",
+    },
+    {
+      "title": "Fotoğrafçılık Kursu",
+      "advertiser": "LensArt",
+      "image": "https://images.unsplash.com/photo-1516035069371-29a1b244cc32",
+    },
   ];
 
   @override
@@ -80,21 +140,26 @@ class _FeedScreenState extends State<FeedScreen> {
           PageView.builder(
             controller: _pageController,
             scrollDirection: Axis.vertical,
-            itemCount: _mockAds.length,
+            // Sonsuz kaydırma: itemCount null = sonsuz
             itemBuilder: (context, index) {
-              final ad = _mockAds[index];
+              // Listeyi döngüsel kullan
+              final item = _feedItems[index % _feedItems.length];
               return Stack(
                 fit: StackFit.expand,
                 children: [
                   Image.network(
-                    ad["image"]!,
+                    item["image"]!,
                     fit: BoxFit.cover,
                     errorBuilder: (c, e, s) => Container(color: AppTheme.surface),
                   ),
                   Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
-                        colors: [Colors.black.withOpacity(0.8), Colors.transparent, Colors.black.withOpacity(0.9)],
+                        colors: [
+                          Colors.black.withOpacity(0.8),
+                          Colors.transparent,
+                          Colors.black.withOpacity(0.9),
+                        ],
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                       ),
@@ -113,12 +178,32 @@ class _FeedScreenState extends State<FeedScreen> {
                             border: Border.all(color: AppTheme.border),
                             color: Colors.black.withOpacity(0.4),
                           ),
-                          child: const Text("Sponsorlu", style: TextStyle(color: AppTheme.textSecondary, fontSize: 10, letterSpacing: 1)),
+                          child: const Text(
+                            "Sponsorlu",
+                            style: TextStyle(
+                              color: AppTheme.textSecondary,
+                              fontSize: 10,
+                              letterSpacing: 1,
+                            ),
+                          ),
                         ),
                         const SizedBox(height: 12),
-                        Text(ad["title"]!, style: const TextStyle(color: AppTheme.textPrimary, fontSize: 22, fontWeight: FontWeight.bold)),
+                        Text(
+                          item["title"]!,
+                          style: const TextStyle(
+                            color: AppTheme.textPrimary,
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                         const SizedBox(height: 4),
-                        Text(ad["advertiser"]!, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
+                        Text(
+                          item["advertiser"]!,
+                          style: const TextStyle(
+                            color: AppTheme.textSecondary,
+                            fontSize: 14,
+                          ),
+                        ),
                         const SizedBox(height: 16),
                         SizedBox(
                           width: double.infinity,
@@ -128,25 +213,36 @@ class _FeedScreenState extends State<FeedScreen> {
                               backgroundColor: AppTheme.textPrimary,
                               foregroundColor: AppTheme.background,
                               elevation: 0,
-                              shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+                              shape: const RoundedRectangleBorder(
+                                borderRadius: BorderRadius.zero,
+                              ),
                             ),
                             onPressed: _watchAd,
-                            icon: Icon(_isAdReady ? Icons.play_arrow : Icons.hourglass_empty, size: 18),
+                            icon: Icon(
+                              _isAdReady ? Icons.play_arrow : Icons.hourglass_empty,
+                              size: 18,
+                            ),
                             label: Text(
-                              _isAdReady ? "ÖDÜLLÜ VİDEOYU İZLE (+50 PUAN)" : "REKLAM YÜKLENİYOR...",
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, letterSpacing: 0.5),
+                              _isAdReady
+                                  ? "ÖDÜLLÜ VİDEOYU İZLE (+50 PUAN)"
+                                  : "REKLAM YÜKLENİYOR...",
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                                letterSpacing: 0.5,
+                              ),
                             ),
                           ),
                         ),
                       ],
                     ),
-                  )
+                  ),
                 ],
               );
             },
           ),
-          
-          // Üst Bakiye Bilgilendirme Göstergesi
+
+          // Üst puan göstergesi
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
@@ -164,13 +260,20 @@ class _FeedScreenState extends State<FeedScreen> {
                     children: [
                       const Icon(Icons.stars, size: 16, color: AppTheme.textPrimary),
                       const SizedBox(width: 6),
-                      Text("$_userPoints Puan", style: const TextStyle(color: AppTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.w500)),
+                      Text(
+                        "$_userPoints Puan",
+                        style: const TextStyle(
+                          color: AppTheme.textPrimary,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
                     ],
                   ),
                 ),
               ),
             ),
-          )
+          ),
         ],
       ),
     );
