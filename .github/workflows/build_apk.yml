@@ -44,16 +44,11 @@ jobs:
           flutter pub add --dev flutter_launcher_icons
           
           # 5. flutter_launcher_icons yapilandirmasi
-          cat >> pubspec.yaml << 'EOF'
-
-flutter_launcher_icons:
-  android: true
-  ios: false
-  image_path: "assets/icons/app_icon.png"
-  min_sdk_android: 21
-  adaptive_icon_background: "#000000"
-  adaptive_icon_foreground: "assets/icons/app_icon.png"
-EOF
+          echo "flutter_launcher_icons:" > flutter_launcher_icons.yaml
+          echo "  android: \"launcher_icon\"" >> flutter_launcher_icons.yaml
+          echo "  ios: false" >> flutter_launcher_icons.yaml
+          echo "  image_path: \"assets/icons/app_icon.png\"" >> flutter_launcher_icons.yaml
+          echo "  min_sdk_android: 21" >> flutter_launcher_icons.yaml
           
           # 6. Ikon uret
           dart run flutter_launcher_icons
