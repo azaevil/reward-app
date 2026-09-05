@@ -44,7 +44,7 @@ class _VidreelAppState extends State<VidreelApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Vidreel',
+      title: 'Vidreel - Watch & Earn USDT',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
       routes: {
@@ -75,7 +75,7 @@ class _MainNavigationHolderState extends State<MainNavigationHolder> {
   final List<Widget> _screens = [
     const FeedScreen(),
     const WalletScreen(),
-    const Center(child: Text("İşlem Geçmişi", style: TextStyle(color: AppTheme.textSecondary))),
+    const Center(child: Text("Transaction History", style: TextStyle(color: AppTheme.textSecondary))),
     const ProfileScreen(),
   ];
 
@@ -91,10 +91,10 @@ class _MainNavigationHolderState extends State<MainNavigationHolder> {
           currentIndex: _currentIndex,
           onTap: (index) => setState(() => _currentIndex = index),
           items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.style), label: 'Keşfet'),
-            BottomNavigationBarItem(icon: Icon(Icons.account_balance_wallet), label: 'Cüzdan'),
-            BottomNavigationBarItem(icon: Icon(Icons.history), label: 'Geçmiş'),
-            BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profil'),
+            BottomNavigationBarItem(icon: Icon(Icons.style), label: 'Feed'),
+            BottomNavigationBarItem(icon: Icon(Icons.account_balance_wallet), label: 'Wallet'),
+            BottomNavigationBarItem(icon: Icon(Icons.history), label: 'History'),
+            BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
           ],
         ),
       ),

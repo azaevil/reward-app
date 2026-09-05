@@ -26,7 +26,7 @@ class _FeedScreenState extends State<FeedScreen> with TickerProviderStateMixin {
   final Map<int, BannerAd> _bannerAds = {};
   final Map<int, bool> _bannerAdLoaded = {};
 
-  // Dönen Ödül Sayacı
+  // Circular Watch Dwell Timer (TikTok Lite Style)
   late AnimationController _progressController;
   Timer? _dwellTimer;
   static const int _requiredWatchSeconds = 4;
@@ -126,7 +126,7 @@ class _FeedScreenState extends State<FeedScreen> with TickerProviderStateMixin {
                 Icon(Icons.monetization_on, color: Colors.amberAccent, size: 18),
                 SizedBox(width: 8),
                 Text(
-                  "+1 Puan Kazandın! (\$0.001)",
+                  "+1 Point Earned! (\$0.001)",
                   style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
                 ),
               ],
@@ -139,7 +139,7 @@ class _FeedScreenState extends State<FeedScreen> with TickerProviderStateMixin {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             backgroundColor: Colors.redAccent,
-            content: Text("Puan kaydedilemedi. Lütfen internet / sunucu bağlantınızı kontrol edin."),
+            content: Text("Could not sync reward. Please check internet / server connection."),
           ),
         );
       }
@@ -169,7 +169,7 @@ class _FeedScreenState extends State<FeedScreen> with TickerProviderStateMixin {
   void _watchBonusAd() {
     if (!_isRewardedAdReady) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Bonus video hazırlanıyor, lütfen birkaç saniye bekleyin...')),
+        const SnackBar(content: Text('Bonus video is loading, please wait a moment...')),
       );
       _loadNextRewardedAd();
       return;
@@ -196,7 +196,7 @@ class _FeedScreenState extends State<FeedScreen> with TickerProviderStateMixin {
               const SnackBar(
                 backgroundColor: Color(0xFF1E3A2B),
                 content: Text(
-                  '🔥 Büyük Bonus! +30 Puan (\$0.030) sunucuya kaydedildi.',
+                  '🔥 Mega Bonus! +30 Points (\$0.030) verified on server.',
                   style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                 ),
               ),
@@ -207,7 +207,7 @@ class _FeedScreenState extends State<FeedScreen> with TickerProviderStateMixin {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 backgroundColor: Colors.redAccent,
-                content: Text("Ödül sunucuda doğrulanamadı. İnternet bağlantınızı kontrol edin."),
+                content: Text("Reward verification failed. Check internet connection."),
               ),
             );
           }
@@ -239,7 +239,7 @@ class _FeedScreenState extends State<FeedScreen> with TickerProviderStateMixin {
       backgroundColor: const Color(0xFF0A0A0E),
       body: Stack(
         children: [
-          // Sonsuz Google AdMob Akışı
+          // 100% In-Feed Google AdMob Stream
           PageView.builder(
             controller: _pageController,
             scrollDirection: Axis.vertical,
@@ -296,7 +296,7 @@ class _FeedScreenState extends State<FeedScreen> with TickerProviderStateMixin {
                                 Icon(Icons.play_arrow, size: 14, color: Colors.purpleAccent),
                                 SizedBox(width: 6),
                                 Text(
-                                  "SPONSORLU GOOGLE REKLAMI",
+                                  "SPONSORED GOOGLE ADS",
                                   style: TextStyle(
                                     color: Colors.purpleAccent,
                                     fontSize: 10,
@@ -344,7 +344,7 @@ class _FeedScreenState extends State<FeedScreen> with TickerProviderStateMixin {
                                       CircularProgressIndicator(color: Colors.purpleAccent, strokeWidth: 2.5),
                                       SizedBox(height: 16),
                                       Text(
-                                        "Google Reklamı Yükleniyor...",
+                                        "Loading Sponsored Content...",
                                         style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
                                       ),
                                     ],
@@ -362,7 +362,7 @@ class _FeedScreenState extends State<FeedScreen> with TickerProviderStateMixin {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text(
-                            "Vidreel Sponsorlu Akış",
+                            "Vidreel Global Stream",
                             style: TextStyle(
                               color: AppTheme.textPrimary,
                               fontSize: 18,
@@ -371,7 +371,7 @@ class _FeedScreenState extends State<FeedScreen> with TickerProviderStateMixin {
                           ),
                           const SizedBox(height: 4),
                           const Text(
-                            "İzledikçe puanlar doğrudan sunucu hesabınıza kaydedilir.",
+                            "Rewards are verified and deposited instantly to your cloud wallet.",
                             style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
                           ),
                           const SizedBox(height: 16),
@@ -395,8 +395,8 @@ class _FeedScreenState extends State<FeedScreen> with TickerProviderStateMixin {
                               ),
                               label: Text(
                                 _isRewardedAdReady
-                                    ? "TAM EKRAN BONUS İZLE (+30 PUAN)"
-                                    : "BONUS YÜKLENİYOR...",
+                                    ? "WATCH BONUS AD (+30 PTS)"
+                                    : "LOADING BONUS...",
                                 style: const TextStyle(
                                   fontWeight: FontWeight.w900,
                                   fontSize: 12,
@@ -414,7 +414,7 @@ class _FeedScreenState extends State<FeedScreen> with TickerProviderStateMixin {
             },
           ),
 
-          // Üst Header
+          // Header
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -448,7 +448,7 @@ class _FeedScreenState extends State<FeedScreen> with TickerProviderStateMixin {
                         ),
                         const SizedBox(width: 8),
                         const Text(
-                          "+1 Puan",
+                          "+1 Pt",
                           style: TextStyle(
                             color: Colors.amberAccent,
                             fontSize: 12,
@@ -472,7 +472,7 @@ class _FeedScreenState extends State<FeedScreen> with TickerProviderStateMixin {
                         const Icon(Icons.stars, size: 16, color: Colors.purpleAccent),
                         const SizedBox(width: 6),
                         Text(
-                          "$_userPoints Puan (\$${dollarEquivalent.toStringAsFixed(3)})",
+                          "$_userPoints Pts (\$${dollarEquivalent.toStringAsFixed(3)})",
                           style: const TextStyle(
                             color: AppTheme.textPrimary,
                             fontSize: 12,

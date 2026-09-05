@@ -48,13 +48,13 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppTheme.surface,
-        title: const Text("Sunucu Ayarı", style: TextStyle(color: AppTheme.textPrimary)),
+        title: const Text("Server Settings", style: TextStyle(color: AppTheme.textPrimary)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              "Backend Sunucu Adresi:",
+              "Backend Server URL:",
               style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
             ),
             const SizedBox(height: 8),
@@ -73,7 +73,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text("İptal", style: TextStyle(color: AppTheme.textSecondary)),
+            child: const Text("Cancel", style: TextStyle(color: AppTheme.textSecondary)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.purpleAccent),
@@ -81,10 +81,10 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
               await _apiService.setBaseUrl(urlController.text);
               if (mounted) Navigator.pop(ctx);
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Sunucu adresi güncellendi.')),
+                const SnackBar(content: Text('Server URL updated successfully.')),
               );
             },
-            child: const Text("Kaydet", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+            child: const Text("Save", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -97,7 +97,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
 
     if (email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Lütfen tüm alanları doldurun.')),
+        const SnackBar(content: Text('Please fill in all fields.')),
       );
       return;
     }
@@ -110,7 +110,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
       Navigator.pushReplacementNamed(context, '/home');
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(backgroundColor: Colors.red.shade900, content: Text(result['message'] ?? 'Giriş başarısız.')),
+        SnackBar(backgroundColor: Colors.red.shade900, content: Text(result['message'] ?? 'Login failed.')),
       );
     }
   }
@@ -122,21 +122,21 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
 
     if (email.isEmpty || password.isEmpty || confirm.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Lütfen tüm alanları doldurun.')),
+        const SnackBar(content: Text('Please fill in all fields.')),
       );
       return;
     }
 
     if (password.length < 8) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Şifre en az 8 karakter olmalıdır.')),
+        const SnackBar(content: Text('Password must be at least 8 characters.')),
       );
       return;
     }
 
     if (password != confirm) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Şifreler eşleşmiyor.')),
+        const SnackBar(content: Text('Passwords do not match.')),
       );
       return;
     }
@@ -147,12 +147,12 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
 
     if (result['success'] == true && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(backgroundColor: Colors.green, content: Text('🎉 Hesabınız oluşturuldu! Hoş geldiniz.')),
+        const SnackBar(backgroundColor: Colors.green, content: Text('🎉 Account created! Welcome to Vidreel.')),
       );
       Navigator.pushReplacementNamed(context, '/home');
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(backgroundColor: Colors.red.shade900, content: Text(result['message'] ?? 'Kayıt başarısız.')),
+        SnackBar(backgroundColor: Colors.red.shade900, content: Text(result['message'] ?? 'Registration failed.')),
       );
     }
   }
@@ -167,7 +167,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
         actions: [
           IconButton(
             icon: const Icon(Icons.settings, color: AppTheme.textSecondary),
-            tooltip: "Sunucu Ayarları",
+            tooltip: "Server Settings",
             onPressed: _showServerSettings,
           )
         ],
@@ -193,7 +193,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
               const SizedBox(height: 16),
               const Center(
                 child: Text(
-                  "Reklam İzle, USDT Kazan",
+                  "Watch Ads, Earn Real USDT Rewards",
                   style: TextStyle(color: AppTheme.textSecondary, fontSize: 13, letterSpacing: 0.5),
                 ),
               ),
@@ -213,8 +213,8 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                   labelColor: Colors.white,
                   unselectedLabelColor: AppTheme.textSecondary,
                   tabs: const [
-                    Tab(text: "Giriş Yap"),
-                    Tab(text: "Kayıt Ol"),
+                    Tab(text: "Sign In"),
+                    Tab(text: "Sign Up"),
                   ],
                 ),
               ),
@@ -225,9 +225,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                 child: TabBarView(
                   controller: _tabController,
                   children: [
-                    // Giriş Yap Sekmesi
                     _buildLoginForm(),
-                    // Kayıt Ol Sekmesi
                     _buildRegisterForm(),
                   ],
                 ),
@@ -243,14 +241,14 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text("E-POSTA", style: TextStyle(color: AppTheme.textSecondary, fontSize: 11, letterSpacing: 1)),
+        const Text("EMAIL ADDRESS", style: TextStyle(color: AppTheme.textSecondary, fontSize: 11, letterSpacing: 1)),
         const SizedBox(height: 6),
         TextField(
           controller: _loginEmailController,
           keyboardType: TextInputType.emailAddress,
           style: const TextStyle(color: AppTheme.textPrimary),
           decoration: const InputDecoration(
-            hintText: "ornek@email.com",
+            hintText: "user@example.com",
             hintStyle: TextStyle(color: Colors.white24),
             filled: true,
             fillColor: AppTheme.surface,
@@ -258,7 +256,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
           ),
         ),
         const SizedBox(height: 16),
-        const Text("ŞİFRE", style: TextStyle(color: AppTheme.textSecondary, fontSize: 11, letterSpacing: 1)),
+        const Text("PASSWORD", style: TextStyle(color: AppTheme.textSecondary, fontSize: 11, letterSpacing: 1)),
         const SizedBox(height: 6),
         TextField(
           controller: _loginPasswordController,
@@ -285,7 +283,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
             onPressed: _isLoading ? null : _handleLogin,
             child: _isLoading
                 ? const CircularProgressIndicator(color: Colors.black)
-                : const Text("GİRİŞ YAP", style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1)),
+                : const Text("SIGN IN", style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1)),
           ),
         ),
       ],
@@ -296,14 +294,14 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text("E-POSTA", style: TextStyle(color: AppTheme.textSecondary, fontSize: 11, letterSpacing: 1)),
+        const Text("EMAIL ADDRESS", style: TextStyle(color: AppTheme.textSecondary, fontSize: 11, letterSpacing: 1)),
         const SizedBox(height: 6),
         TextField(
           controller: _registerEmailController,
           keyboardType: TextInputType.emailAddress,
           style: const TextStyle(color: AppTheme.textPrimary),
           decoration: const InputDecoration(
-            hintText: "ornek@email.com",
+            hintText: "user@example.com",
             hintStyle: TextStyle(color: Colors.white24),
             filled: true,
             fillColor: AppTheme.surface,
@@ -311,14 +309,14 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
           ),
         ),
         const SizedBox(height: 12),
-        const Text("ŞİFRE (MİN. 8 KARAKTER)", style: TextStyle(color: AppTheme.textSecondary, fontSize: 11, letterSpacing: 1)),
+        const Text("PASSWORD (MIN. 8 CHARACTERS)", style: TextStyle(color: AppTheme.textSecondary, fontSize: 11, letterSpacing: 1)),
         const SizedBox(height: 6),
         TextField(
           controller: _registerPasswordController,
           obscureText: true,
           style: const TextStyle(color: AppTheme.textPrimary),
           decoration: const InputDecoration(
-            hintText: "En az 8 karakter",
+            hintText: "At least 8 characters",
             hintStyle: TextStyle(color: Colors.white24),
             filled: true,
             fillColor: AppTheme.surface,
@@ -326,14 +324,14 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
           ),
         ),
         const SizedBox(height: 12),
-        const Text("ŞİFRE TEKRAR", style: TextStyle(color: AppTheme.textSecondary, fontSize: 11, letterSpacing: 1)),
+        const Text("CONFIRM PASSWORD", style: TextStyle(color: AppTheme.textSecondary, fontSize: 11, letterSpacing: 1)),
         const SizedBox(height: 6),
         TextField(
           controller: _registerPasswordConfirmController,
           obscureText: true,
           style: const TextStyle(color: AppTheme.textPrimary),
           decoration: const InputDecoration(
-            hintText: "Şifrenizi tekrar girin",
+            hintText: "Re-enter your password",
             hintStyle: TextStyle(color: Colors.white24),
             filled: true,
             fillColor: AppTheme.surface,
@@ -353,7 +351,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
             onPressed: _isLoading ? null : _handleRegister,
             child: _isLoading
                 ? const CircularProgressIndicator(color: Colors.black)
-                : const Text("KAYIT OL VE BAŞLA", style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1)),
+                : const Text("CREATE ACCOUNT & START", style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1)),
           ),
         ),
       ],

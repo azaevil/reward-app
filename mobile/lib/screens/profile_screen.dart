@@ -12,7 +12,7 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   final ApiService _apiService = ApiService();
-  String _userEmail = "Yükleniyor...";
+  String _userEmail = "Loading...";
 
   @override
   void initState() {
@@ -24,7 +24,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final email = await _apiService.getUserEmail();
     if (mounted) {
       setState(() {
-        _userEmail = email ?? "Kayıtlı Kullanıcı";
+        _userEmail = email ?? "Verified Member";
       });
     }
   }
@@ -46,12 +46,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Profil")),
+      appBar: AppBar(title: const Text("Profile & Settings")),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Column(
           children: [
-            // Kullanıcı Kartı
+            // User Profile Card
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -76,7 +76,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
-                          "Doğrulanmış Hesap",
+                          "Verified Member",
                           style: TextStyle(
                             color: AppTheme.textPrimary,
                             fontWeight: FontWeight.bold,
@@ -102,37 +102,37 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
             _MenuItem(
               icon: Icons.security_outlined,
-              label: "Privacy Policy (Gizlilik Politikası)",
+              label: "Privacy Policy",
               onTap: () => _openLegal(context, 0),
             ),
             const SizedBox(height: 1),
             _MenuItem(
               icon: Icons.description_outlined,
-              label: "Terms of Service (Kullanım Şartları)",
+              label: "Terms of Service",
               onTap: () => _openLegal(context, 1),
             ),
             const SizedBox(height: 1),
             _MenuItem(
               icon: Icons.info_outline,
-              label: "Hakkında — Vidreel v1.0",
+              label: "About Vidreel Global v1.0",
               onTap: () {
                 showDialog(
                   context: context,
                   builder: (_) => AlertDialog(
                     backgroundColor: AppTheme.surface,
                     title: const Text(
-                      "Vidreel",
+                      "Vidreel Global",
                       style: TextStyle(color: AppTheme.textPrimary),
                     ),
                     content: const Text(
-                      "Vidreel v1.0 (Güvenli Sunucu Tabanlı)\nReklam izle, puan kazan, Binance Pay ile çek.\n\nİletişim: Vidreel@proton.me",
+                      "Vidreel v1.0 (Tier-1 Global Edition)\nWatch short sponsored reels, accumulate points, and withdraw real USDT directly to your Binance Pay account.\n\nSupport: Vidreel@proton.me",
                       style: TextStyle(color: AppTheme.textSecondary),
                     ),
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.pop(context),
                         child: const Text(
-                          "Tamam",
+                          "OK",
                           style: TextStyle(color: Colors.purpleAccent),
                         ),
                       ),
@@ -144,7 +144,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
             const Spacer(),
 
-            // Çıkış Yap
+            // Sign Out
             SizedBox(
               width: double.infinity,
               height: 48,
@@ -159,7 +159,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 onPressed: _handleLogout,
                 icon: const Icon(Icons.logout, size: 18),
                 label: const Text(
-                  "ÇIKIŞ YAP",
+                  "SIGN OUT",
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
               ),

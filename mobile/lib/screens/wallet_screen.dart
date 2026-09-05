@@ -66,10 +66,11 @@ class _WalletScreenState extends State<WalletScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Cüzdan & Hak Ediş"),
+        title: const Text("Wallet & Payouts"),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh, color: AppTheme.textSecondary),
+            tooltip: "Sync Balance",
             onPressed: _fetchWallet,
           )
         ],
@@ -84,7 +85,7 @@ class _WalletScreenState extends State<WalletScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Bakiye Kartı
+              // Balance Card
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(24),
@@ -96,7 +97,7 @@ class _WalletScreenState extends State<WalletScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      "KULLANILABİLİR BAKİYE (SUNUCU ONAYLI)",
+                      "AVAILABLE BALANCE (CLOUD VERIFIED)",
                       style: TextStyle(
                         color: AppTheme.textSecondary,
                         fontSize: 11,
@@ -123,7 +124,7 @@ class _WalletScreenState extends State<WalletScreen> {
                           ),
                     const SizedBox(height: 4),
                     Text(
-                      "$_balancePoints Puan (Toplam Kazanılan: $_totalEarnedPoints Puan)",
+                      "$_balancePoints Points (Lifetime Earned: $_totalEarnedPoints Pts)",
                       style: const TextStyle(
                         color: AppTheme.textSecondary,
                         fontSize: 13,
@@ -136,14 +137,14 @@ class _WalletScreenState extends State<WalletScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: const [
                         Text(
-                          "Minimum çekim eşiği",
+                          "Minimum Payout Threshold",
                           style: TextStyle(
                             color: AppTheme.textSecondary,
                             fontSize: 13,
                           ),
                         ),
                         Text(
-                          "\$5.00 USD (5.000 Puan)",
+                          "\$5.00 USD (5,000 Pts)",
                           style: TextStyle(
                             color: Colors.purpleAccent,
                             fontSize: 13,
@@ -158,7 +159,7 @@ class _WalletScreenState extends State<WalletScreen> {
 
               const SizedBox(height: 16),
 
-              // Binance Pay Bilgi Kutusu
+              // Binance Pay Information Box
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
@@ -172,7 +173,7 @@ class _WalletScreenState extends State<WalletScreen> {
                     SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        "Ödemeler Binance Pay (USDT) ile doğrudan sunucu tarafından işlenir. Sıfır komisyon ve anlık aktarım için Binance KYC onayınızın tamamlanmış olması gerekir.",
+                        "Global payouts are processed instantly via Binance Pay (USDT) with zero transaction fees. Ensure your Binance account has completed KYC verification.",
                         style: TextStyle(
                           color: AppTheme.textSecondary,
                           fontSize: 12,
@@ -186,7 +187,7 @@ class _WalletScreenState extends State<WalletScreen> {
 
               const SizedBox(height: 24),
 
-              // Para Çekme Butonu
+              // Withdraw Action Button
               SizedBox(
                 width: double.infinity,
                 height: 52,
@@ -202,7 +203,7 @@ class _WalletScreenState extends State<WalletScreen> {
                   onPressed: _showWithdrawSheet,
                   icon: const Icon(Icons.send, size: 18),
                   label: const Text(
-                    "PARA ÇEKME TALEBİ OLUŞTUR",
+                    "REQUEST USDT PAYOUT",
                     style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 0.5),
                   ),
                 ),
@@ -292,7 +293,7 @@ class _WithdrawBottomSheetState extends State<_WithdrawBottomSheet> {
         const Icon(Icons.check_circle_outline, color: Colors.greenAccent, size: 56),
         const SizedBox(height: 16),
         const Text(
-          "Talep Sunucuya İletildi!",
+          "Payout Request Submitted!",
           style: TextStyle(
             color: AppTheme.textPrimary,
             fontSize: 20,
@@ -301,7 +302,7 @@ class _WithdrawBottomSheetState extends State<_WithdrawBottomSheet> {
         ),
         const SizedBox(height: 8),
         const Text(
-          "Para çekme talebiniz kaydedildi. Güvenlik incelemesinin ardından Binance Pay hesabınıza aktarılacaktır.",
+          "Your withdrawal request has been received. Following standard security verification, USDT will be deposited to your Binance Pay account within 7-14 business days.",
           textAlign: TextAlign.center,
           style: TextStyle(color: AppTheme.textSecondary, height: 1.5),
         ),
@@ -316,7 +317,7 @@ class _WithdrawBottomSheetState extends State<_WithdrawBottomSheet> {
               shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
             ),
             onPressed: () => Navigator.pop(context),
-            child: const Text("KAPAT", style: TextStyle(fontWeight: FontWeight.bold)),
+            child: const Text("DONE", style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ),
       ],
@@ -335,7 +336,7 @@ class _WithdrawBottomSheetState extends State<_WithdrawBottomSheet> {
               const Icon(Icons.currency_bitcoin, color: Colors.purpleAccent, size: 22),
               const SizedBox(width: 8),
               const Text(
-                "Binance Pay ile Çek",
+                "Withdraw via Binance Pay",
                 style: TextStyle(
                   color: AppTheme.textPrimary,
                   fontSize: 18,
@@ -351,7 +352,7 @@ class _WithdrawBottomSheetState extends State<_WithdrawBottomSheet> {
           ),
           const SizedBox(height: 4),
           const Text(
-            "Anlık ve komisyonsuz transfer. KYC tamamlanmış Binance Pay ID veya e-posta giriniz.",
+            "Instant & zero fee transfer. Enter your KYC-verified Binance Pay ID or registered email.",
             style: TextStyle(color: AppTheme.textSecondary, fontSize: 12, height: 1.4),
           ),
           if (_errorMessage != null) ...[
@@ -368,7 +369,7 @@ class _WithdrawBottomSheetState extends State<_WithdrawBottomSheet> {
           const SizedBox(height: 16),
 
           const Text(
-            "BİNANCE PAY ID VEYA E-POSTA",
+            "BINANCE PAY ID OR EMAIL",
             style: TextStyle(
               color: AppTheme.textSecondary,
               fontSize: 11,
@@ -380,18 +381,18 @@ class _WithdrawBottomSheetState extends State<_WithdrawBottomSheet> {
             controller: _binanceIdController,
             style: const TextStyle(color: AppTheme.textPrimary),
             decoration: const InputDecoration(
-              hintText: "örn. 123456789 veya ornek@email.com",
+              hintText: "e.g. 123456789 or user@binance.com",
               filled: true,
               fillColor: AppTheme.background,
               border: OutlineInputBorder(),
             ),
-            validator: (v) => (v == null || v.trim().isEmpty) ? 'Binance Pay ID / e-posta zorunludur.' : null,
+            validator: (v) => (v == null || v.trim().isEmpty) ? 'Binance Pay ID / email is required.' : null,
           ),
 
           const SizedBox(height: 14),
 
           const Text(
-            "ÇEKMEK İSTEDİĞİNİZ MİKTAR (USD)",
+            "WITHDRAWAL AMOUNT (USD)",
             style: TextStyle(
               color: AppTheme.textSecondary,
               fontSize: 11,
@@ -414,11 +415,11 @@ class _WithdrawBottomSheetState extends State<_WithdrawBottomSheet> {
             validator: (v) {
               final val = double.tryParse(v ?? '');
               if (val == null || val < 5.0) {
-                return 'Minimum çekim tutarı \$5.00\'dır.';
+                return 'Minimum withdrawal amount is \$5.00.';
               }
               final userUsd = widget.currentPoints * 0.001;
               if (val > userUsd) {
-                return 'Yetersiz bakiye (Mevcut: \$${userUsd.toStringAsFixed(2)})';
+                return 'Insufficient balance (Available: \$${userUsd.toStringAsFixed(2)})';
               }
               return null;
             },
@@ -439,7 +440,7 @@ class _WithdrawBottomSheetState extends State<_WithdrawBottomSheet> {
               child: _isSubmitting
                   ? const CircularProgressIndicator(color: Colors.black)
                   : const Text(
-                      "TALEBİ GÖNDER",
+                      "SUBMIT PAYOUT REQUEST",
                       style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 0.5),
                     ),
             ),

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+﻿from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app import models, schemas, security
@@ -9,7 +9,7 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 def register(user_in: schemas.UserCreate, db: Session = Depends(get_db)):
     db_user = db.query(models.User).filter(models.User.email == user_in.email).first()
     if db_user:
-        raise HTTPException(status_code=400, detail="Bu e-posta adresi zaten kayıtlı.")
+        raise HTTPException(status_code=400, detail="This email address is already registered.")
     
     hashed_pwd = security.get_password_hash(user_in.password)
     new_user = models.User(email=user_in.email, hashed_password=hashed_pwd)
@@ -17,7 +17,7 @@ def register(user_in: schemas.UserCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_user)
 
-    # Otomatik Cüzdan Oluştur
+    # Automatic Wallet Generation
     new_wallet = models.Wallet(user_id=new_user.id)
     db.add(new_wallet)
     db.commit()
@@ -28,7 +28,7 @@ def register(user_in: schemas.UserCreate, db: Session = Depends(get_db)):
 def login(user_in: schemas.UserCreate, db: Session = Depends(get_db)):
     user = db.query(models.User).filter(models.User.email == user_in.email).first()
     if not user or not security.verify_password(user_in.password, user.hashed_password):
-        raise HTTPException(status_code=401, detail="Hatalı e-posta veya şifre.")
+        raise HTTPException(status_code=401, detail="Invalid email or password.")
     
     access_token = security.create_access_token(data={"sub": str(user.id)})
     refresh_token = security.create_refresh_token(data={"sub": str(user.id)})
