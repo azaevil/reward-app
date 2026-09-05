@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../theme.dart';
 import '../services/ad_mob_service.dart';
@@ -9,41 +10,95 @@ class FeedScreen extends StatefulWidget {
   State<FeedScreen> createState() => _FeedScreenState();
 }
 
-class _FeedScreenState extends State<FeedScreen> {
+class _FeedScreenState extends State<FeedScreen> with TickerProviderStateMixin {
   final PageController _pageController = PageController();
   final AdMobService _adMobService = AdMobService();
   bool _isAdReady = false;
-  int _userPoints = 0; // Başlangıçta 0 puan
-  int _swipeCount = 0; // Kaç kez kaydırıldı
-  static const int _adEvery = 3; // Her 3 kaydırmada 1 reklam
+  int _userPoints = 0; // Puan havuzu
+  int _currentPage = 0;
+  
+  // Dönen Ödül Sayacı (TikTok Lite Tarzı)
+  late AnimationController _progressController;
+  Timer? _dwellTimer;
+  static const int _requiredWatchSeconds = 4; // 4 saniye izleme şartı
+  int _currentWatchSeconds = 0;
+  bool _rewardGivenForCurrentCard = false;
 
   @override
   void initState() {
     super.initState();
     _loadNextAd();
-    _pageController.addListener(_onPageScroll);
+    
+    _progressController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: _requiredWatchSeconds),
+    );
+
+    _startDwellTimer();
   }
 
   @override
   void dispose() {
-    _pageController.removeListener(_onPageScroll);
+    _dwellTimer?.cancel();
+    _progressController.dispose();
     _pageController.dispose();
     super.dispose();
   }
 
-  void _onPageScroll() {
-    // Sayfa değiştiğinde (tam kaydırma tamamlandığında) tetikle
-    if (_pageController.page != null &&
-        _pageController.page! == _pageController.page!.roundToDouble()) {
-      final newPage = _pageController.page!.round();
-      if (newPage > 0) {
-        _swipeCount++;
-        if (_swipeCount % _adEvery == 0 && _isAdReady) {
-          // Her 3 kaydırmada reklam otomatik aç
-          Future.delayed(const Duration(milliseconds: 300), _watchAd);
-        }
+  void _startDwellTimer() {
+    _dwellTimer?.cancel();
+    _progressController.reset();
+    _currentWatchSeconds = 0;
+    _rewardGivenForCurrentCard = false;
+
+    _progressController.forward();
+
+    _dwellTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) return;
+      _currentWatchSeconds++;
+
+      if (_currentWatchSeconds >= _requiredWatchSeconds && !_rewardGivenForCurrentCard) {
+        _rewardGivenForCurrentCard = true;
+        _giveMicroReward();
       }
-    }
+    });
+  }
+
+  void _giveMicroReward() {
+    setState(() {
+      _userPoints += 1; // +1 Puan ($0.001)
+    });
+    
+    // Küçük başarı animasyonu / SnackBar
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        duration: const Duration(milliseconds: 1200),
+        backgroundColor: Colors.purple.shade900,
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.only(bottom: 90, left: 40, right: 40),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        content: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: const [
+            Icon(Icons.monetization_on, color: Colors.amberAccent, size: 18),
+            SizedBox(width: 8),
+            Text(
+              "+1 Puan Kazandın! (\$0.001)",
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _onPageChanged(int index) {
+    setState(() {
+      _currentPage = index;
+    });
+    // Yeni karta geçince sayacı yeniden başlat
+    _startDwellTimer();
   }
 
   void _loadNextAd() {
@@ -57,23 +112,23 @@ class _FeedScreenState extends State<FeedScreen> {
     );
   }
 
-  void _watchAd() {
+  void _watchBonusAd() {
     if (!mounted) return;
     if (_isAdReady) {
       _adMobService.showRewardedAd(
         onEarnedReward: (amount) {
           if (!mounted) return;
-          final earned = amount > 0 ? amount : 50;
+          final earned = amount > 0 ? amount : 30; // +30 Puan Bonus
           setState(() {
             _userPoints += earned;
             _isAdReady = false;
           });
-          _loadNextAd(); // Sonraki reklamı hazırla
+          _loadNextAd();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               backgroundColor: const Color(0xFF1E3A2B),
               content: Text(
-                '🎉 Tebrikler! +$earned Puan kazandınız.',
+                '🔥 Büyük Bonus! +$earned Puan (\$${(earned * 0.001).toStringAsFixed(3)}) kazandınız.',
                 style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
               ),
             ),
@@ -82,67 +137,64 @@ class _FeedScreenState extends State<FeedScreen> {
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Yeni reklam yükleniyor, lütfen birkaç saniye bekleyin...')),
+        const SnackBar(content: Text('Bonus video hazırlanıyor, lütfen birkaç saniye bekleyin...')),
       );
       _loadNextAd();
     }
   }
 
-  // Sonsuz kaydırma için tekrarlanan içerik
   final List<Map<String, String>> _feedItems = [
     {
       "title": "Sürdürülebilir Mimarlık Sergisi",
       "advertiser": "Studio Nord",
       "image": "https://images.unsplash.com/photo-1600585154340-be6161a56a0c",
+      "tag": "Sponsorlu Vitrin"
     },
     {
       "title": "Geleceğin Finans Yönetimi",
       "advertiser": "Vanguard Labs",
       "image": "https://images.unsplash.com/photo-1551836022-d5d88e9218df",
+      "tag": "Fintech & Web3"
     },
     {
-      "title": "Doğa Kaçamağı Fırsatları",
-      "advertiser": "WildTrails",
+      "title": "Doğa Kaçamağı & Keşif Rotaları",
+      "advertiser": "WildTrails Co.",
       "image": "https://images.unsplash.com/photo-1506905925346-21bda4d32df4",
+      "tag": "Seyahat & Macera"
     },
     {
-      "title": "Şehir İçi Ulaşım Devrimi",
-      "advertiser": "MoveX",
+      "title": "Şehir İçi Elektrikli Ulaşım Devrimi",
+      "advertiser": "MoveX Global",
       "image": "https://images.unsplash.com/photo-1558618666-fcd25c85cd64",
+      "tag": "Teknoloji Trend"
     },
     {
-      "title": "Minimalist Yaşam Koleksiyonu",
+      "title": "Minimalist Yaşam ve Tasarım Koleksiyonu",
       "advertiser": "Forma Studio",
       "image": "https://images.unsplash.com/photo-1555041469-a586c61ea9bc",
+      "tag": "Tasarım & Dekor"
     },
     {
-      "title": "Sağlıklı Beslenme Planları",
-      "advertiser": "NutriLife",
+      "title": "Kişiselleştirilmiş Sağlıklı Yaşam Planı",
+      "advertiser": "NutriLife AI",
       "image": "https://images.unsplash.com/photo-1490645935967-10de6ba17061",
-    },
-    {
-      "title": "Akıllı Ev Teknolojisi",
-      "advertiser": "SmartHome TR",
-      "image": "https://images.unsplash.com/photo-1558002038-1055e2dae1d7",
-    },
-    {
-      "title": "Fotoğrafçılık Kursu",
-      "advertiser": "LensArt",
-      "image": "https://images.unsplash.com/photo-1516035069371-29a1b244cc32",
+      "tag": "Sağlık & Yaşam"
     },
   ];
 
   @override
   Widget build(BuildContext context) {
+    final double dollarEquivalent = _userPoints * 0.001;
+
     return Scaffold(
       body: Stack(
         children: [
+          // Dikey Reels / Feed Kaydırma
           PageView.builder(
             controller: _pageController,
             scrollDirection: Axis.vertical,
-            // Sonsuz kaydırma: itemCount null = sonsuz
+            onPageChanged: _onPageChanged,
             itemBuilder: (context, index) {
-              // Listeyi döngüsel kullan
               final item = _feedItems[index % _feedItems.length];
               return Stack(
                 fit: StackFit.expand,
@@ -156,38 +208,42 @@ class _FeedScreenState extends State<FeedScreen> {
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
-                          Colors.black.withOpacity(0.8),
+                          Colors.black.withOpacity(0.85),
                           Colors.transparent,
-                          Colors.black.withOpacity(0.9),
+                          Colors.black.withOpacity(0.95),
                         ],
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                       ),
                     ),
                   ),
+                  
+                  // Kart Bilgisi ve Aksiyon Alanı
                   Positioned(
-                    bottom: 40,
+                    bottom: 30,
                     left: 20,
                     right: 20,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
-                            border: Border.all(color: AppTheme.border),
-                            color: Colors.black.withOpacity(0.4),
+                            border: Border.all(color: Colors.purpleAccent.withOpacity(0.6)),
+                            color: Colors.purple.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(4),
                           ),
-                          child: const Text(
-                            "Sponsorlu",
-                            style: TextStyle(
-                              color: AppTheme.textSecondary,
+                          child: Text(
+                            item["tag"]!,
+                            style: const TextStyle(
+                              color: Colors.purpleAccent,
                               fontSize: 10,
+                              fontWeight: FontWeight.bold,
                               letterSpacing: 1,
                             ),
                           ),
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 10),
                         Text(
                           item["title"]!,
                           style: const TextStyle(
@@ -205,29 +261,32 @@ class _FeedScreenState extends State<FeedScreen> {
                           ),
                         ),
                         const SizedBox(height: 16),
+                        
+                        // Ekstra Bonus Butonu
                         SizedBox(
                           width: double.infinity,
                           height: 44,
                           child: ElevatedButton.icon(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: AppTheme.textPrimary,
-                              foregroundColor: AppTheme.background,
+                              backgroundColor: Colors.purpleAccent,
+                              foregroundColor: Colors.black,
                               elevation: 0,
-                              shape: const RoundedRectangleBorder(
-                                borderRadius: BorderRadius.zero,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(4),
                               ),
                             ),
-                            onPressed: _watchAd,
+                            onPressed: _watchBonusAd,
                             icon: Icon(
-                              _isAdReady ? Icons.play_arrow : Icons.hourglass_empty,
-                              size: 18,
+                              _isAdReady ? Icons.play_circle_filled : Icons.hourglass_empty,
+                              size: 20,
+                              color: Colors.black,
                             ),
                             label: Text(
                               _isAdReady
-                                  ? "ÖDÜLLÜ VİDEOYU İZLE (+50 PUAN)"
-                                  : "REKLAM YÜKLENİYOR...",
+                                  ? "BONUS REKLAM İZLE (+30 PUAN)"
+                                  : "BONUS YÜKLENİYOR...",
                               style: const TextStyle(
-                                fontWeight: FontWeight.bold,
+                                fontWeight: FontWeight.w900,
                                 fontSize: 12,
                                 letterSpacing: 0.5,
                               ),
@@ -242,35 +301,77 @@ class _FeedScreenState extends State<FeedScreen> {
             },
           ),
 
-          // Üst puan göstergesi
+          // Üst Header (Sol: TikTok Tarzı Dönen Sayaç, Sağ: Canlı Bakiye)
           SafeArea(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              child: Align(
-                alignment: Alignment.topRight,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: AppTheme.surface,
-                    borderRadius: BorderRadius.circular(4),
-                    border: Border.all(color: AppTheme.border),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.stars, size: 16, color: AppTheme.textPrimary),
-                      const SizedBox(width: 6),
-                      Text(
-                        "$_userPoints Puan",
-                        style: const TextStyle(
-                          color: AppTheme.textPrimary,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // Sol: Dönen Ödül Sayacı
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.7),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: Colors.white12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: 28,
+                          height: 28,
+                          child: AnimatedBuilder(
+                            animation: _progressController,
+                            builder: (context, child) {
+                              return CircularProgressIndicator(
+                                value: _progressController.value,
+                                strokeWidth: 3,
+                                backgroundColor: Colors.white24,
+                                valueColor: const AlwaysStoppedAnimation<Color>(Colors.amberAccent),
+                              );
+                            },
+                          ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 8),
+                        const Text(
+                          "+1 Puan",
+                          style: TextStyle(
+                            color: Colors.amberAccent,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
+
+                  // Sağ: Toplam Bakiye & Dolar Göstergesi
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: AppTheme.surface.withOpacity(0.9),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: AppTheme.border),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.stars, size: 16, color: Colors.purpleAccent),
+                        const SizedBox(width: 6),
+                        Text(
+                          "$_userPoints Puan (\$${dollarEquivalent.toStringAsFixed(3)})",
+                          style: const TextStyle(
+                            color: AppTheme.textPrimary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
