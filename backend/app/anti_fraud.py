@@ -1,4 +1,4 @@
-import time
+﻿import time
 import logging
 from collections import defaultdict
 from fastapi import HTTPException, status
@@ -6,7 +6,6 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-# Redis bağlantısı dene, yoksa bellek içi (in-memory) rate limiter kullan
 redis_client = None
 try:
     import redis
@@ -14,9 +13,8 @@ try:
     redis_client.ping()
 except Exception:
     redis_client = None
-    logger.info("Redis sunucusu bulunamadı, yerel bellek (in-memory) hız sınırlayıcı devrede.")
+    logger.info("Redis sunucusu bulunamadi, yerel bellek (in-memory) rate limiter devrede.")
 
-# In-memory rate limiting veri yapıları
 _memory_store = defaultdict(lambda: {"count": 0, "expires_at": 0})
 
 def _memory_incr(key: str, ttl_seconds: int) -> int:
@@ -31,15 +29,16 @@ def _memory_incr(key: str, ttl_seconds: int) -> int:
 
 class AntiFraudEngine:
     @staticmethod
-    def validate_ad_consumption(user_id: int, duration_seconds: int, client_ip: str):
-        # 1. Minimum İzlenme Süresi Kontrolü
-        if duration_seconds < 5:
+    def validate_ad_consumption(user_id: int, duration_seconds: int, client_ip: str, is_rewarded: bool = False):
+        # 1. Minimum Izlenme Suresi Kontrolu (Feed icin min 4 sn, Bonus video icin min 10 sn)
+        min_seconds = 10 if is_rewarded else 4
+        if duration_seconds < min_seconds:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, 
-                detail="Şüpheli etkinlik: Geçersiz reklam izleme süresi."
+                detail=f"Guvenlik uyarisi: Reklam izleme suresi yetersiz (Minimum {min_seconds} sn gerekli)."
             )
 
-        # 2. Hız Sınırlaması (Rate Limiting) - Son 1 dakikada maksimum 4 reklam
+        # 2. Hiz Sinirlamasi (Rate Limiting) - Son 1 dakikada maksimum 15 istek
         rate_key = f"rate:ad:{user_id}"
         if redis_client:
             try:
@@ -51,13 +50,13 @@ class AntiFraudEngine:
         else:
             current_count = _memory_incr(rate_key, 60)
         
-        if current_count > 4:
+        if current_count > 15:
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail="Anormal işlem hızı tespit edildi. Lütfen bekleyin."
+                detail="Cok hizli istek tespit edildi. Lutfen biraz bekleyin."
             )
 
-        # 3. IP Bazlı Günlük Limit Kontrolü (Sybil / Multi-account Saldırı Engeli)
+        # 3. IP Bazli Gunluk Limit Kontrolu (Multi-account bot engeli)
         ip_key = f"ip:limit:{client_ip}"
         if redis_client:
             try:
@@ -69,10 +68,10 @@ class AntiFraudEngine:
         else:
             ip_count = _memory_incr(ip_key, 86400)
         
-        if ip_count > 500:
+        if ip_count > 1500:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Bu IP adresinden çok fazla etkinlik tespit edildi."
+                detail="Bu IP adresinden gunluk maksimum istek limitine ulasildi."
             )
 
     @staticmethod

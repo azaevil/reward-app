@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../theme.dart';
 import '../services/ad_mob_service.dart';
+import '../services/api_service.dart';
 
 class FeedScreen extends StatefulWidget {
   const FeedScreen({super.key});
@@ -14,15 +15,18 @@ class FeedScreen extends StatefulWidget {
 class _FeedScreenState extends State<FeedScreen> with TickerProviderStateMixin {
   final PageController _pageController = PageController();
   final AdMobService _adMobService = AdMobService();
+  final ApiService _apiService = ApiService();
+
   bool _isRewardedAdReady = false;
   int _userPoints = 0;
   int _currentPage = 0;
+  bool _isOnline = true;
+  bool _isSyncing = false;
 
-  // Her kart için AdMob Reklamları
   final Map<int, BannerAd> _bannerAds = {};
   final Map<int, bool> _bannerAdLoaded = {};
 
-  // Dönen Ödül Sayacı (TikTok Lite Tarzı)
+  // Dönen Ödül Sayacı
   late AnimationController _progressController;
   Timer? _dwellTimer;
   static const int _requiredWatchSeconds = 4;
@@ -32,6 +36,7 @@ class _FeedScreenState extends State<FeedScreen> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
+    _syncWalletFromBackend();
     _loadNextRewardedAd();
 
     _progressController = AnimationController(
@@ -53,6 +58,23 @@ class _FeedScreenState extends State<FeedScreen> with TickerProviderStateMixin {
     super.dispose();
   }
 
+  void _syncWalletFromBackend() async {
+    try {
+      final wallet = await _apiService.getWallet();
+      if (mounted) {
+        setState(() {
+          final balance = wallet['balance_points'] ?? 0;
+          _userPoints = (balance is num) ? balance.toInt() : (double.tryParse(balance.toString())?.toInt() ?? 0);
+          _isOnline = true;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _isOnline = false);
+      }
+    }
+  }
+
   void _startDwellTimer() {
     _dwellTimer?.cancel();
     _progressController.reset();
@@ -67,37 +89,63 @@ class _FeedScreenState extends State<FeedScreen> with TickerProviderStateMixin {
 
       if (_currentWatchSeconds >= _requiredWatchSeconds && !_rewardGivenForCurrentCard) {
         _rewardGivenForCurrentCard = true;
-        _giveMicroReward();
+        _claimDwellReward();
       }
     });
   }
 
-  void _giveMicroReward() {
-    setState(() {
-      _userPoints += 1; // +1 Puan ($0.001)
-    });
+  void _claimDwellReward() async {
+    if (_isSyncing) return;
+    _isSyncing = true;
 
-    ScaffoldMessenger.of(context).clearSnackBars();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        duration: const Duration(milliseconds: 1200),
-        backgroundColor: Colors.purple.shade900,
-        behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.only(bottom: 90, left: 40, right: 40),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        content: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: const [
-            Icon(Icons.monetization_on, color: Colors.amberAccent, size: 18),
-            SizedBox(width: 8),
-            Text(
-              "+1 Puan Kazandın! (\$0.001)",
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+    try {
+      final res = await _apiService.sendAdEvent(
+        adId: "in_feed_ad_$_currentPage",
+        durationSeconds: _requiredWatchSeconds,
+        isRewarded: false,
+      );
+
+      if (mounted) {
+        final newBal = res['new_balance_points'];
+        setState(() {
+          _userPoints = (newBal is num) ? newBal.toInt() : (double.tryParse(newBal.toString())?.toInt() ?? (_userPoints + 1));
+          _isOnline = true;
+        });
+
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            duration: const Duration(milliseconds: 1200),
+            backgroundColor: Colors.purple.shade900,
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.only(bottom: 90, left: 40, right: 40),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            content: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: const [
+                Icon(Icons.monetization_on, color: Colors.amberAccent, size: 18),
+                SizedBox(width: 8),
+                Text(
+                  "+1 Puan Kazandın! (\$0.001)",
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
-    );
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            backgroundColor: Colors.redAccent,
+            content: Text("Puan kaydedilemedi. Lütfen internet / sunucu bağlantınızı kontrol edin."),
+          ),
+        );
+      }
+    } finally {
+      _isSyncing = false;
+    }
   }
 
   void _onPageChanged(int index) {
@@ -119,34 +167,53 @@ class _FeedScreenState extends State<FeedScreen> with TickerProviderStateMixin {
   }
 
   void _watchBonusAd() {
-    if (!mounted) return;
-    if (_isRewardedAdReady) {
-      _adMobService.showRewardedAd(
-        onEarnedReward: (amount) {
-          if (!mounted) return;
-          final earned = amount > 0 ? amount : 30;
-          setState(() {
-            _userPoints += earned;
-            _isRewardedAdReady = false;
-          });
-          _loadNextRewardedAd();
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              backgroundColor: const Color(0xFF1E3A2B),
-              content: Text(
-                '🔥 Büyük Bonus! +$earned Puan (\$${(earned * 0.001).toStringAsFixed(3)}) kazandınız.',
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-              ),
-            ),
-          );
-        },
-      );
-    } else {
+    if (!_isRewardedAdReady) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Bonus video hazırlanıyor, lütfen birkaç saniye bekleyin...')),
       );
       _loadNextRewardedAd();
+      return;
     }
+
+    _adMobService.showRewardedAd(
+      onEarnedReward: (amount) async {
+        try {
+          final res = await _apiService.sendAdEvent(
+            adId: "bonus_rewarded_video_${DateTime.now().millisecondsSinceEpoch}",
+            durationSeconds: 15,
+            isRewarded: true,
+          );
+
+          if (mounted) {
+            final newBal = res['new_balance_points'];
+            setState(() {
+              _userPoints = (newBal is num) ? newBal.toInt() : (double.tryParse(newBal.toString())?.toInt() ?? (_userPoints + 30));
+              _isRewardedAdReady = false;
+            });
+            _loadNextRewardedAd();
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                backgroundColor: Color(0xFF1E3A2B),
+                content: Text(
+                  '🔥 Büyük Bonus! +30 Puan (\$0.030) sunucuya kaydedildi.',
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                ),
+              ),
+            );
+          }
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                backgroundColor: Colors.redAccent,
+                content: Text("Ödül sunucuda doğrulanamadı. İnternet bağlantınızı kontrol edin."),
+              ),
+            );
+          }
+        }
+      },
+    );
   }
 
   BannerAd _getOrCreateBannerAd(int index) {
@@ -172,7 +239,7 @@ class _FeedScreenState extends State<FeedScreen> with TickerProviderStateMixin {
       backgroundColor: const Color(0xFF0A0A0E),
       body: Stack(
         children: [
-          // %100 GOOGLE ADMOB REKLAM AKIŞI (Sonsuz Kaydırma)
+          // Sonsuz Google AdMob Akışı
           PageView.builder(
             controller: _pageController,
             scrollDirection: Axis.vertical,
@@ -196,7 +263,6 @@ class _FeedScreenState extends State<FeedScreen> with TickerProviderStateMixin {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    // Arka Plan Işıklandırması
                     Positioned(
                       top: 120,
                       left: 0,
@@ -213,7 +279,6 @@ class _FeedScreenState extends State<FeedScreen> with TickerProviderStateMixin {
                       ),
                     ),
 
-                    // Ortadaki Gerçek Google Reklamı (Video / Görsel / Medya)
                     Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -244,7 +309,6 @@ class _FeedScreenState extends State<FeedScreen> with TickerProviderStateMixin {
                           ),
                           const SizedBox(height: 24),
                           
-                          // Google AdMob Reklam Çerçevesi
                           isLoaded
                               ? Container(
                                   width: bannerAd.size.width.toDouble(),
@@ -290,7 +354,6 @@ class _FeedScreenState extends State<FeedScreen> with TickerProviderStateMixin {
                       ),
                     ),
 
-                    // Alt Panel & Bonus Butonu
                     Positioned(
                       bottom: 30,
                       left: 20,
@@ -308,7 +371,7 @@ class _FeedScreenState extends State<FeedScreen> with TickerProviderStateMixin {
                           ),
                           const SizedBox(height: 4),
                           const Text(
-                            "İzledikçe puanlar otomatik olarak cüzdanınıza eklenir.",
+                            "İzledikçe puanlar doğrudan sunucu hesabınıza kaydedilir.",
                             style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
                           ),
                           const SizedBox(height: 16),
@@ -395,6 +458,7 @@ class _FeedScreenState extends State<FeedScreen> with TickerProviderStateMixin {
                       ],
                     ),
                   ),
+
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                     decoration: BoxDecoration(

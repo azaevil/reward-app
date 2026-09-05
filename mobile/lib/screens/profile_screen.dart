@@ -1,15 +1,46 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../theme.dart';
+import '../services/api_service.dart';
 import 'legal_screen.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  final ApiService _apiService = ApiService();
+  String _userEmail = "Yükleniyor...";
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserEmail();
+  }
+
+  void _loadUserEmail() async {
+    final email = await _apiService.getUserEmail();
+    if (mounted) {
+      setState(() {
+        _userEmail = email ?? "Kayıtlı Kullanıcı";
+      });
+    }
+  }
 
   void _openLegal(BuildContext context, int tab) {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => LegalScreen(initialTab: tab)),
     );
+  }
+
+  void _handleLogout() async {
+    await _apiService.logout();
+    if (mounted) {
+      Navigator.pushNamedAndRemoveUntil(context, '/auth', (route) => false);
+    }
   }
 
   @override
@@ -27,46 +58,57 @@ class ProfileScreen extends StatelessWidget {
                 color: AppTheme.surface,
                 border: Border.all(color: AppTheme.border),
               ),
-              child: const Row(
+              child: Row(
                 children: [
-                  Icon(Icons.person, size: 40, color: AppTheme.textPrimary),
-                  SizedBox(width: 16),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "Kullanıcı Hesabı",
-                        style: TextStyle(
-                          color: AppTheme.textPrimary,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        "user@example.com",
-                        style: TextStyle(
-                          color: AppTheme.textSecondary,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: Colors.purple.withOpacity(0.2),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.purpleAccent),
+                    ),
+                    child: const Icon(Icons.person, size: 24, color: Colors.purpleAccent),
                   ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          "Doğrulanmış Hesap",
+                          style: TextStyle(
+                            color: AppTheme.textPrimary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _userEmail,
+                          style: const TextStyle(
+                            color: AppTheme.textSecondary,
+                            fontSize: 13,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  )
                 ],
               ),
             ),
 
             const SizedBox(height: 24),
 
-            // Ayarlar Listesi
             _MenuItem(
               icon: Icons.security_outlined,
-              label: "Privacy Policy",
+              label: "Privacy Policy (Gizlilik Politikası)",
               onTap: () => _openLegal(context, 0),
             ),
             const SizedBox(height: 1),
             _MenuItem(
               icon: Icons.description_outlined,
-              label: "Terms of Service",
+              label: "Terms of Service (Kullanım Şartları)",
               onTap: () => _openLegal(context, 1),
             ),
             const SizedBox(height: 1),
@@ -83,7 +125,7 @@ class ProfileScreen extends StatelessWidget {
                       style: TextStyle(color: AppTheme.textPrimary),
                     ),
                     content: const Text(
-                      "Vidreel v1.0\nReklam izle, puan kazan, Binance Pay ile çek.\n\nVidreel@proton.me",
+                      "Vidreel v1.0 (Güvenli Sunucu Tabanlı)\nReklam izle, puan kazan, Binance Pay ile çek.\n\nİletişim: Vidreel@proton.me",
                       style: TextStyle(color: AppTheme.textSecondary),
                     ),
                     actions: [
@@ -114,9 +156,7 @@ class ProfileScreen extends StatelessWidget {
                     borderRadius: BorderRadius.zero,
                   ),
                 ),
-                onPressed: () {
-                  Navigator.pushReplacementNamed(context, '/auth');
-                },
+                onPressed: _handleLogout,
                 icon: const Icon(Icons.logout, size: 18),
                 label: const Text(
                   "ÇIKIŞ YAP",

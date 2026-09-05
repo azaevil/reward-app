@@ -1,4 +1,4 @@
-from decimal import Decimal
+﻿from decimal import Decimal
 from fastapi import APIRouter, Depends, Request, HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db
@@ -9,21 +9,13 @@ router = APIRouter(prefix="/ads", tags=["Ads"])
 
 @router.get("/feed")
 def get_ad_feed(current_user: models.User = Depends(security.get_current_user)):
-    # Simüle Edilmiş Güvenli Reklam Yayın Motoru Verileri
     return [
         {
             "ad_id": "ad_101",
-            "title": "Minimalist Tasarım Rehberi",
+            "title": "Minimalist Tasarim Rehberi",
             "advertiser": "DesignCorp",
             "media_url": "https://images.unsplash.com/photo-1507238691740-187a5b1d37b8",
             "impression_token": "token_sec_9918231"
-        },
-        {
-            "ad_id": "ad_102",
-            "title": "Ölçeklenebilir Cloud Mimarileri",
-            "advertiser": "CloudStack",
-            "media_url": "https://images.unsplash.com/photo-1451187580459-43490279c0fa",
-            "impression_token": "token_sec_9918232"
         }
     ]
 
@@ -35,27 +27,26 @@ def record_ad_event(
     current_user: models.User = Depends(security.get_current_user)
 ):
     client_ip = request.client.host
-    AntiFraudEngine.validate_ad_consumption(current_user.id, event.duration_seconds, client_ip)
+    AntiFraudEngine.validate_ad_consumption(current_user.id, event.duration_seconds, client_ip, event.is_rewarded)
 
-    # Token Çift Kullanım Engeli (Replay Attack Prevention)
+    # Token Cift Kullanim Engeli (Replay Attack Prevention)
     existing_token = db.query(models.AdImpression).filter(
         models.AdImpression.impression_token == event.impression_token
     ).first()
     if existing_token:
-        raise HTTPException(status_code=400, detail="Bu etkinlik zaten işlendi.")
+        raise HTTPException(status_code=400, detail="Bu etkinlik zaten islendi.")
 
-    # Reklam Geliri ve Ödül Payı Hesaplama
-    settings = db.query(models.SystemSettings).first()
-    points_rate = settings.points_per_usd if settings else 1000
-    
-    gross_rev = Decimal("0.0200") # $0.02 CPM/CPC karşılığı simüle edilen değer
-    user_reward_pct = Decimal("0.60")
-    
-    reward_usd = gross_rev * user_reward_pct
-    earned_points = reward_usd * Decimal(points_rate)
-    platform_fee = gross_rev - reward_usd
+    # Puan Hesaplama: Bonus Rewarded = 30 Puan ($0.03), Feed Dwell = 1 Puan ($0.001)
+    if event.is_rewarded:
+        earned_points = Decimal("30.00")
+        gross_rev = Decimal("0.0500") # $0.05 simule edilen eCPM payi
+    else:
+        earned_points = Decimal("1.00")
+        gross_rev = Decimal("0.0020")
 
-    # Veritabanı Kaydı ve Cüzdan Güncellemesi (Pessimistic Lock Riskine Karşı Atomic Güncelleme)
+    platform_fee = gross_rev - (earned_points * Decimal("0.001"))
+
+    # Veritabani Kaydi ve Cuzdan Guncellemesi
     impression = models.AdImpression(
         user_id=current_user.id,
         ad_id=event.ad_id,
@@ -69,8 +60,21 @@ def record_ad_event(
     db.add(impression)
 
     wallet = db.query(models.Wallet).filter(models.Wallet.user_id == current_user.id).with_for_update().first()
-    wallet.pending_points += earned_points
+    if not wallet:
+        wallet = models.Wallet(user_id=current_user.id)
+        db.add(wallet)
+        db.commit()
+        db.refresh(wallet)
+
+    wallet.balance_points += earned_points
     wallet.total_earned_points += earned_points
 
     db.commit()
-    return {"status": "success", "pending_points_added": earned_points}
+    db.refresh(wallet)
+
+    return {
+        "status": "success",
+        "earned_points": earned_points,
+        "new_balance_points": wallet.balance_points,
+        "total_earned_points": wallet.total_earned_points
+    }

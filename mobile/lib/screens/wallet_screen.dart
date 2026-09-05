@@ -1,5 +1,6 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../theme.dart';
+import '../services/api_service.dart';
 
 class WalletScreen extends StatefulWidget {
   const WalletScreen({super.key});
@@ -9,9 +10,40 @@ class WalletScreen extends StatefulWidget {
 }
 
 class _WalletScreenState extends State<WalletScreen> {
-  // Mock bakiye — ileride API'den gelecek
-  final int totalPoints = 0;
-  final double usdValue = 0.00;
+  final ApiService _apiService = ApiService();
+  int _balancePoints = 0;
+  int _totalEarnedPoints = 0;
+  double _withdrawnUsd = 0.0;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchWallet();
+  }
+
+  Future<void> _fetchWallet() async {
+    setState(() => _isLoading = true);
+    try {
+      final data = await _apiService.getWallet();
+      if (mounted) {
+        setState(() {
+          final bal = data['balance_points'] ?? 0;
+          final total = data['total_earned_points'] ?? 0;
+          final withdrawn = data['total_withdrawn_usd'] ?? 0.0;
+
+          _balancePoints = (bal is num) ? bal.toInt() : (double.tryParse(bal.toString())?.toInt() ?? 0);
+          _totalEarnedPoints = (total is num) ? total.toInt() : (double.tryParse(total.toString())?.toInt() ?? 0);
+          _withdrawnUsd = (withdrawn is num) ? withdrawn.toDouble() : (double.tryParse(withdrawn.toString()) ?? 0.0);
+          _isLoading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
 
   void _showWithdrawSheet() {
     showModalBottomSheet(
@@ -21,156 +53,186 @@ class _WalletScreenState extends State<WalletScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(0)),
       ),
-      builder: (_) => const _WithdrawBottomSheet(),
+      builder: (_) => _WithdrawBottomSheet(
+        currentPoints: _balancePoints,
+        onSuccess: _fetchWallet,
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final double usdValue = _balancePoints * 0.001;
+
     return Scaffold(
-      appBar: AppBar(title: const Text("Cüzdan & Hak Ediş")),
-      body: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Bakiye Kartı
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: AppTheme.surface,
-                border: Border.all(color: AppTheme.border),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    "KULLANILABİLİR BAKİYE",
-                    style: TextStyle(
-                      color: AppTheme.textSecondary,
-                      fontSize: 11,
-                      letterSpacing: 1.2,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    "\$${usdValue.toStringAsFixed(2)} USD",
-                    style: const TextStyle(
-                      color: AppTheme.textPrimary,
-                      fontSize: 36,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    "$totalPoints Puan",
-                    style: const TextStyle(
-                      color: AppTheme.textSecondary,
-                      fontSize: 14,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  const Divider(color: AppTheme.border),
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: const [
-                      Text(
-                        "Minimum çekim",
-                        style: TextStyle(
-                          color: AppTheme.textSecondary,
-                          fontSize: 13,
-                        ),
-                      ),
-                      Text(
-                        "\$5.00 USD",
-                        style: TextStyle(
-                          color: AppTheme.textPrimary,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // Binance Pay Bilgi Kutusu
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.purpleAccent.withOpacity(0.4)),
-                color: Colors.purple.withOpacity(0.08),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  Icon(Icons.currency_bitcoin, color: Colors.purpleAccent, size: 20),
-                  SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      "Ödemeler Binance Pay ile yapılır. Anlık ve komisyonsuz transfer için Binance hesabınızın KYC doğrulamasının tamamlanmış olması gerekmektedir.",
+      appBar: AppBar(
+        title: const Text("Cüzdan & Hak Ediş"),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh, color: AppTheme.textSecondary),
+            onPressed: _fetchWallet,
+          )
+        ],
+      ),
+      body: RefreshIndicator(
+        onRefresh: _fetchWallet,
+        color: Colors.purpleAccent,
+        backgroundColor: AppTheme.surface,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Bakiye Kartı
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: AppTheme.surface,
+                  border: Border.all(color: AppTheme.border),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      "KULLANILABİLİR BAKİYE (SUNUCU ONAYLI)",
                       style: TextStyle(
                         color: AppTheme.textSecondary,
-                        fontSize: 12,
-                        height: 1.5,
+                        fontSize: 11,
+                        letterSpacing: 1.2,
                       ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 8),
+                    _isLoading
+                        ? const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 8),
+                            child: SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(color: Colors.purpleAccent, strokeWidth: 2),
+                            ),
+                          )
+                        : Text(
+                            "\$${usdValue.toStringAsFixed(3)} USD",
+                            style: const TextStyle(
+                              color: AppTheme.textPrimary,
+                              fontSize: 34,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                    const SizedBox(height: 4),
+                    Text(
+                      "$_balancePoints Puan (Toplam Kazanılan: $_totalEarnedPoints Puan)",
+                      style: const TextStyle(
+                        color: AppTheme.textSecondary,
+                        fontSize: 13,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Divider(color: AppTheme.border),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: const [
+                        Text(
+                          "Minimum çekim eşiği",
+                          style: TextStyle(
+                            color: AppTheme.textSecondary,
+                            fontSize: 13,
+                          ),
+                        ),
+                        Text(
+                          "\$5.00 USD (5.000 Puan)",
+                          style: TextStyle(
+                            color: Colors.purpleAccent,
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
 
-            const SizedBox(height: 24),
+              const SizedBox(height: 16),
 
-            // Para Çekme Butonu
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.textPrimary,
-                  foregroundColor: AppTheme.background,
-                  elevation: 0,
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.zero,
+              // Binance Pay Bilgi Kutusu
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.purpleAccent.withOpacity(0.4)),
+                  color: Colors.purple.withOpacity(0.08),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: const [
+                    Icon(Icons.currency_bitcoin, color: Colors.purpleAccent, size: 20),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        "Ödemeler Binance Pay (USDT) ile doğrudan sunucu tarafından işlenir. Sıfır komisyon ve anlık aktarım için Binance KYC onayınızın tamamlanmış olması gerekir.",
+                        style: TextStyle(
+                          color: AppTheme.textSecondary,
+                          fontSize: 12,
+                          height: 1.5,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              // Para Çekme Butonu
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.textPrimary,
+                    foregroundColor: AppTheme.background,
+                    elevation: 0,
+                    shape: const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.zero,
+                    ),
+                  ),
+                  onPressed: _showWithdrawSheet,
+                  icon: const Icon(Icons.send, size: 18),
+                  label: const Text(
+                    "PARA ÇEKME TALEBİ OLUŞTUR",
+                    style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 0.5),
                   ),
                 ),
-                onPressed: _showWithdrawSheet,
-                icon: const Icon(Icons.send, size: 18),
-                label: const Text(
-                  "PARA ÇEKME TALEBİ OLUŞTUR",
-                  style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 0.5),
-                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-// ─────────────────────────────────────────
-// PARA ÇEKME BOTTOM SHEET
-// ─────────────────────────────────────────
 class _WithdrawBottomSheet extends StatefulWidget {
-  const _WithdrawBottomSheet();
+  final int currentPoints;
+  final VoidCallback onSuccess;
+
+  const _WithdrawBottomSheet({required this.currentPoints, required this.onSuccess});
 
   @override
   State<_WithdrawBottomSheet> createState() => _WithdrawBottomSheetState();
 }
 
 class _WithdrawBottomSheetState extends State<_WithdrawBottomSheet> {
+  final ApiService _apiService = ApiService();
   final _formKey = GlobalKey<FormState>();
   final _binanceIdController = TextEditingController();
   final _amountController = TextEditingController();
   bool _isSubmitting = false;
   bool _submitted = false;
+  String? _errorMessage;
 
   @override
   void dispose() {
@@ -181,16 +243,35 @@ class _WithdrawBottomSheetState extends State<_WithdrawBottomSheet> {
 
   void _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    setState(() => _isSubmitting = true);
+    setState(() {
+      _isSubmitting = true;
+      _errorMessage = null;
+    });
 
-    // Simüle edilmiş API çağrısı — ileride gerçek endpoint bağlanacak
-    await Future.delayed(const Duration(seconds: 1));
+    final amount = double.tryParse(_amountController.text.trim()) ?? 0.0;
+    final binanceId = _binanceIdController.text.trim();
 
-    if (mounted) {
-      setState(() {
-        _isSubmitting = false;
-        _submitted = true;
-      });
+    try {
+      await _apiService.withdraw(
+        amountUsd: amount,
+        paymentMethod: "BINANCE_PAY",
+        payoutDetails: binanceId,
+      );
+
+      if (mounted) {
+        widget.onSuccess();
+        setState(() {
+          _isSubmitting = false;
+          _submitted = true;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+          _errorMessage = e.toString().replaceAll("Exception: ", "");
+        });
+      }
     }
   }
 
@@ -211,7 +292,7 @@ class _WithdrawBottomSheetState extends State<_WithdrawBottomSheet> {
         const Icon(Icons.check_circle_outline, color: Colors.greenAccent, size: 56),
         const SizedBox(height: 16),
         const Text(
-          "Talep Alındı!",
+          "Talep Sunucuya İletildi!",
           style: TextStyle(
             color: AppTheme.textPrimary,
             fontSize: 20,
@@ -220,7 +301,7 @@ class _WithdrawBottomSheetState extends State<_WithdrawBottomSheet> {
         ),
         const SizedBox(height: 8),
         const Text(
-          "Para çekme talebiniz 7–14 iş günü içinde Binance Pay hesabınıza aktarılacaktır.",
+          "Para çekme talebiniz kaydedildi. Güvenlik incelemesinin ardından Binance Pay hesabınıza aktarılacaktır.",
           textAlign: TextAlign.center,
           style: TextStyle(color: AppTheme.textSecondary, height: 1.5),
         ),
@@ -249,7 +330,6 @@ class _WithdrawBottomSheetState extends State<_WithdrawBottomSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Başlık
           Row(
             children: [
               const Icon(Icons.currency_bitcoin, color: Colors.purpleAccent, size: 22),
@@ -271,14 +351,24 @@ class _WithdrawBottomSheetState extends State<_WithdrawBottomSheet> {
           ),
           const SizedBox(height: 4),
           const Text(
-            "Anlık ve komisyonsuz transfer. KYC tamamlanmış Binance hesabı gereklidir.",
+            "Anlık ve komisyonsuz transfer. KYC tamamlanmış Binance Pay ID veya e-posta giriniz.",
             style: TextStyle(color: AppTheme.textSecondary, fontSize: 12, height: 1.4),
           ),
-          const SizedBox(height: 20),
+          if (_errorMessage != null) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(10),
+              color: Colors.red.shade900.withOpacity(0.3),
+              child: Text(
+                _errorMessage!,
+                style: const TextStyle(color: Colors.redAccent, fontSize: 12),
+              ),
+            ),
+          ],
+          const SizedBox(height: 16),
 
-          // Binance ID / Email alanı
           const Text(
-            "BİNANCE PAY ID veya E-POSTA",
+            "BİNANCE PAY ID VEYA E-POSTA",
             style: TextStyle(
               color: AppTheme.textSecondary,
               fontSize: 11,
@@ -288,37 +378,18 @@ class _WithdrawBottomSheetState extends State<_WithdrawBottomSheet> {
           const SizedBox(height: 6),
           TextFormField(
             controller: _binanceIdController,
-            keyboardType: TextInputType.emailAddress,
             style: const TextStyle(color: AppTheme.textPrimary),
-            decoration: InputDecoration(
-              hintText: "örn. 123456789 veya user@email.com",
-              hintStyle: const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+            decoration: const InputDecoration(
+              hintText: "örn. 123456789 veya ornek@email.com",
               filled: true,
               fillColor: AppTheme.background,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.zero,
-                borderSide: const BorderSide(color: AppTheme.border),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.zero,
-                borderSide: BorderSide(color: AppTheme.border),
-              ),
-              focusedBorder: const OutlineInputBorder(
-                borderRadius: BorderRadius.zero,
-                borderSide: BorderSide(color: Colors.purpleAccent),
-              ),
+              border: OutlineInputBorder(),
             ),
-            validator: (v) {
-              if (v == null || v.trim().isEmpty) {
-                return 'Binance Pay ID veya e-posta giriniz.';
-              }
-              return null;
-            },
+            validator: (v) => (v == null || v.trim().isEmpty) ? 'Binance Pay ID / e-posta zorunludur.' : null,
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
 
-          // Miktar
           const Text(
             "ÇEKMEK İSTEDİĞİNİZ MİKTAR (USD)",
             style: TextStyle(
@@ -332,70 +403,45 @@ class _WithdrawBottomSheetState extends State<_WithdrawBottomSheet> {
             controller: _amountController,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             style: const TextStyle(color: AppTheme.textPrimary),
-            decoration: InputDecoration(
+            decoration: const InputDecoration(
               hintText: "Minimum \$5.00",
               prefixText: "\$ ",
-              prefixStyle: const TextStyle(color: AppTheme.textSecondary),
-              hintStyle: const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+              prefixStyle: TextStyle(color: AppTheme.textSecondary),
               filled: true,
               fillColor: AppTheme.background,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.zero,
-                borderSide: BorderSide(color: AppTheme.border),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.zero,
-                borderSide: BorderSide(color: AppTheme.border),
-              ),
-              focusedBorder: const OutlineInputBorder(
-                borderRadius: BorderRadius.zero,
-                borderSide: BorderSide(color: Colors.purpleAccent),
-              ),
+              border: OutlineInputBorder(),
             ),
             validator: (v) {
-              final amount = double.tryParse(v ?? '');
-              if (amount == null || amount < 5.0) {
-                return 'Minimum çekim miktarı \$5.00\'dır.';
+              final val = double.tryParse(v ?? '');
+              if (val == null || val < 5.0) {
+                return 'Minimum çekim tutarı \$5.00\'dır.';
+              }
+              final userUsd = widget.currentPoints * 0.001;
+              if (val > userUsd) {
+                return 'Yetersiz bakiye (Mevcut: \$${userUsd.toStringAsFixed(2)})';
               }
               return null;
             },
           ),
 
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
 
-          // Gönder Butonu
           SizedBox(
             width: double.infinity,
-            height: 52,
+            height: 50,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.purpleAccent,
                 foregroundColor: Colors.black,
-                elevation: 0,
                 shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
               ),
               onPressed: _isSubmitting ? null : _submit,
               child: _isSubmitting
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.black,
-                      ),
-                    )
+                  ? const CircularProgressIndicator(color: Colors.black)
                   : const Text(
                       "TALEBİ GÖNDER",
                       style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 0.5),
                     ),
-            ),
-          ),
-
-          const SizedBox(height: 12),
-          const Center(
-            child: Text(
-              "Transferler 7–14 iş günü içinde gerçekleştirilir.",
-              style: TextStyle(color: AppTheme.textSecondary, fontSize: 11),
             ),
           ),
         ],

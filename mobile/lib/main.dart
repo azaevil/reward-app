@@ -1,9 +1,11 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'theme.dart';
+import 'screens/auth_screen.dart';
 import 'screens/feed_screen.dart';
 import 'screens/wallet_screen.dart';
 import 'screens/profile_screen.dart';
 import 'services/ad_mob_service.dart';
+import 'services/api_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -11,8 +13,33 @@ void main() async {
   runApp(const VidreelApp());
 }
 
-class VidreelApp extends StatelessWidget {
+class VidreelApp extends StatefulWidget {
   const VidreelApp({super.key});
+
+  @override
+  State<VidreelApp> createState() => _VidreelAppState();
+}
+
+class _VidreelAppState extends State<VidreelApp> {
+  final ApiService _apiService = ApiService();
+  bool _isCheckingAuth = true;
+  bool _isLoggedIn = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkInitialAuth();
+  }
+
+  void _checkInitialAuth() async {
+    final loggedIn = await _apiService.isLoggedIn();
+    if (mounted) {
+      setState(() {
+        _isLoggedIn = loggedIn;
+        _isCheckingAuth = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -20,7 +47,18 @@ class VidreelApp extends StatelessWidget {
       title: 'Vidreel',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
-      home: const MainNavigationHolder(),
+      routes: {
+        '/auth': (context) => const AuthScreen(),
+        '/home': (context) => const MainNavigationHolder(),
+      },
+      home: _isCheckingAuth
+          ? const Scaffold(
+              backgroundColor: AppTheme.background,
+              body: Center(
+                child: CircularProgressIndicator(color: Colors.purpleAccent),
+              ),
+            )
+          : (_isLoggedIn ? const MainNavigationHolder() : const AuthScreen()),
     );
   }
 }
