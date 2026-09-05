@@ -33,22 +33,42 @@ jobs:
           # 2. Kodlarimizi lib altina kopyala
           cp -r mobile/lib/* app_build/lib/
           
+          # 3. App ikonunu kopyala
+          mkdir -p app_build/assets/icons
+          cp Assets/img/VidReelAppIcon.png app_build/assets/icons/app_icon.png
+          
           cd app_build
           
-          # 3. Paketleri temiz sekilde ekle
+          # 4. Paketleri temiz sekilde ekle
           flutter pub add http flutter_secure_storage google_mobile_ads
+          flutter pub add --dev flutter_launcher_icons
           
-          # 4. AdMob App ID'sini AndroidManifest.xml icine ekle
+          # 5. flutter_launcher_icons yapilandirmasi
+          cat >> pubspec.yaml << 'EOF'
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/icons/app_icon.png"
+  min_sdk_android: 21
+  adaptive_icon_background: "#000000"
+  adaptive_icon_foreground: "assets/icons/app_icon.png"
+EOF
+          
+          # 6. Ikon uret
+          dart run flutter_launcher_icons
+          
+          # 7. AdMob App ID'sini AndroidManifest.xml icine ekle
           MANIFEST_FILE="android/app/src/main/AndroidManifest.xml"
           sed -i '/<\/application>/i \        <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="ca-app-pub-7125012606848968~4912599600"/>' $MANIFEST_FILE
           
-          # 5. compileSdk 37 ve minSdk 21 yap
+          # 8. compileSdk 37 ve minSdk 21 yap
           find android -name "build.gradle.kts" -exec sed -i 's/compileSdk = .*/compileSdk = 37/g' {} +
           find android -name "build.gradle.kts" -exec sed -i 's/minSdk = .*/minSdk = 21/g' {} +
           find android -name "build.gradle" -exec sed -i 's/compileSdkVersion .*/compileSdkVersion 37/g' {} +
           find android -name "build.gradle" -exec sed -i 's/minSdkVersion .*/minSdkVersion 21/g' {} +
 
-          # 6. Hem APK (Telefon Testi) Hem AAB (Play Store) Derle
+          # 9. Hem APK (Telefon Testi) Hem AAB (Play Store) Derle
           flutter build apk --debug --no-tree-shake-icons
           flutter build appbundle --release --no-tree-shake-icons
           
